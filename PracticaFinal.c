@@ -57,6 +57,9 @@ struct Clientes *listaClientes;
 int contadorClientesApp;
 int contadorClientesRed;
 int nSolicitudesDomiciliarias;
+pthread_mutex_t semaforoFichero;
+pthread_mutex_t semaforoColaClientes;
+pthread_mutex_t semaforoSolicitudes;
 
 
 //Definicion de las funciones
@@ -78,6 +81,19 @@ int main(int argc, char *argv[]){
     contadorClientesRed = 0;
     nSolicitudesDomiciliarias = 0;
     listaClientes = malloc(sizeof(struct Clientes) * 20);
+    //Creamos los semaforos que usaremos luego
+    if (pthread_mutex_init(&semaforoFichero, NULL) != 0) {
+        perror("Error en la creacion del semaforo de Ficheros");
+        exit (-1);
+    }
+    if (pthread_mutex_init(&semaforoColaClientes, NULL) != 0) {
+        perror("Error en la creacion del semaforo de la cola de clientes");
+        exit (-1);
+    }
+    if (pthread_mutex_init(&semaforoSolicitudes, NULL) != 0) {
+        perror("Error en la creacion del semaforo de solicitudes");
+        exit (-1);
+    }
     
     //Crear el archivo donde se almacenen los logs
     ficheroLogs = fopen("registroTiempos.log" , "w");
@@ -112,7 +128,6 @@ int calculaAleatorio(int inicio, int fin){
 void escribirEnLog(char *id, char *mensaje){
 
     /*ESTA PARTE TENDRÁ QUE ESTAR CONTROLADA POR UN MUTEX*/
-
     //Obtencion de la fecha y hora actuales
     time_t now = time(0);
     struct tm *tlocal = localtime(&now);
@@ -120,17 +135,22 @@ void escribirEnLog(char *id, char *mensaje){
     strftime(stnow, 25, "%d/ %m/ %y %H: %M: %S", tlocal);
 
     //Se escribe el mensaje en el fichero con la hora y el identificador
+    //Bloquea el semaforo del fichero para que nadie pueda acceder a el.
+    pthread_mutex_lock(&semaforoFichero);
     ficheroLogs = fopen("registroTiempos.log", "a");
     fprintf(ficheroLogs, "[%s] %s: %s\n", stnow, id, mensaje);
+    pthread_mutex_unlock(&semaforoFichero);
 }
 
 //Estas funciones las realizaran los distintos thread
 void nuevoClienteRed() {
-
+    pthread_muteX_lock(&semaforoColaClientes);
+    //Dentro del mutex solo tiene que estar el codigo de la zona critica.
+    pthread_mutex_unlock(&semaforoColaClientes);
 }
 
 void accionesCliente() {
-
+    
 }
 
 void *accionesTecnico(void *arg) {
