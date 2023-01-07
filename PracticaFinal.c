@@ -144,7 +144,7 @@ void escribirEnLog(char *id, char *mensaje){
 
 //Estas funciones las realizaran los distintos thread
 void nuevoClienteRed() {
-    pthread_muteX_lock(&semaforoColaClientes);
+    pthread_mutex_lock(&semaforoColaClientes);
     //Dentro del mutex solo tiene que estar el codigo de la zona critica.
     pthread_mutex_unlock(&semaforoColaClientes);
 }
