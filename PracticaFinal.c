@@ -5,17 +5,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <pthread.h>
-
-//Variables globales
-int peticionesMax;
-int countPeticiones;
-int numTecnicos;
-FILE *ficheroLogs;
-
-
-//Definicion de las funciones
-int calculaAleatorio(int inicio, int fin);
-void escribirEnLog(char *id, char *mensaje);
+#include <unistd.h>
 
 //Estructuras
 struct Clientes{
@@ -32,7 +22,7 @@ struct Clientes{
 
     //Hilo que ejecutan los clientes
     pthread_t hiloCliente;
-}
+};
 
 struct Tecnico{
 
@@ -44,7 +34,7 @@ struct Tecnico{
 
     //Hilo que ejecutan los tecnicos
     pthread_t hiloTecnico;
-}
+};
 
 struct ResponsableReps{
 
@@ -55,15 +45,39 @@ struct ResponsableReps{
     int count;
 
     //Hilo que ejecutan los responsables
-    pthread_t hiloResponsable
-}
+    pthread_t hiloResponsable;
+};
 
+//Variables globales
+int peticionesMax;
+int countPeticiones;
+int numTecnicos;
+FILE *ficheroLogs;
+struct Clientes *listaClientes;
+int contadorClientesApp;
+int contadorClientesRed;
+int nSolicitudesDomiciliarias;
+
+
+//Definicion de las funciones
+int calculaAleatorio(int inicio, int fin);
+void escribirEnLog(char *id, char *mensaje);
+void nuevoClienteRed();
+void accionesCliente();
+void *accionesTecnico(void *arg);
+void *accionesEncargado(void *arg);
+void *accionesTecnicoDomiciliario(void *arg);
+void *accionesresponsablesReparacion(void *arg);
 
 int main(int argc, char *argv[]){
     //Asignar valores por defecto a algunas variables
     peticionesMax = 20;
     countPeticiones = 0;
     numTecnicos = 2;
+    contadorClientesApp = 0;
+    contadorClientesRed = 0;
+    nSolicitudesDomiciliarias = 0;
+    listaClientes = malloc(sizeof(struct Clientes) * 20);
     
     //Crear el archivo donde se almacenen los logs
     ficheroLogs = fopen("registroTiempos.log" , "w");
@@ -71,7 +85,18 @@ int main(int argc, char *argv[]){
         perror("Error en la apertura del archivo de logs");
         exit(-1);
     }
-
+    pthread_t tecnico_1, tecnico_2;
+    pthread_create(&tecnico_1, NULL, accionesTecnico, "Creado el tecnico 1");
+    pthread_create(&tecnico_2, NULL, accionesTecnico, "Creado el tecnico 2");
+    pthread_t responsableReparacion_1, responsableReparacion_2;
+    pthread_create(&responsableReparacion_1, NULL, accionesresponsablesReparacion, "Creado el responsable 1");
+    pthread_create(&responsableReparacion_2, NULL, accionesresponsablesReparacion, "Creado el responsable 2");
+    pthread_t encargado;
+    pthread_create(&encargado, NULL, accionesEncargado, "Creado el encargado");
+    pthread_t tecnicoDomiciliario;
+    pthread_create(&tecnicoDomiciliario, NULL, accionesTecnicoDomiciliario, "Creado el tecnico domiciliario");
+    sleep(1);
+    printf("Fin del programa\n");
 
     return 0;
 }
@@ -97,4 +122,33 @@ void escribirEnLog(char *id, char *mensaje){
     //Se escribe el mensaje en el fichero con la hora y el identificador
     ficheroLogs = fopen("registroTiempos.log", "a");
     fprintf(ficheroLogs, "[%s] %s: %s\n", stnow, id, mensaje);
+}
+
+//Estas funciones las realizaran los distintos thread
+void nuevoClienteRed() {
+
+}
+
+void accionesCliente() {
+
+}
+
+void *accionesTecnico(void *arg) {
+    printf("%s\n", (char *)arg);
+    pthread_exit(NULL);
+}
+
+void *accionesEncargado(void *arg) {
+    printf("%s\n", (char *)arg);
+    pthread_exit(NULL);
+}
+
+void *accionesTecnicoDomiciliario(void *arg) {
+    printf("%s\n", (char *)arg);
+    pthread_exit(NULL);
+}
+
+void *accionesresponsablesReparacion(void *arg) {
+    printf("%s\n", (char *)arg);
+    pthread_exit(NULL);
 }
