@@ -102,7 +102,7 @@ int main(int argc, char *argv[]){
     nSolicitudesDomiciliarias = 0;
     
     //Definicion de los punteros de las listas de clientes, tecnicos y responsables
-    listaClientes =(struct Clientes*) malloc(sizeof(struct Clientes) * 20);
+    listaClientes =(struct Clientes*) malloc(sizeof(struct Clientes) * peticionesMax);
     listaTecnicos =(struct Tecnico*) malloc(sizeof(struct Tecnico) * numTecnicos);
     listaResponsables =(struct ResponsableReps*) malloc(sizeof(struct ResponsableReps) * numResponsables);
     srand(getpid());
@@ -144,15 +144,14 @@ int main(int argc, char *argv[]){
     
 
     //Creacion de los hilos de los tecnicos.
-    int i = 0;
-    for(i=0; i<numTecnicos; i++){
+    for(int i=0; i<numTecnicos; i++){
         listaTecnicos[i].id=i;
         listaTecnicos[i].count=0;
         pthread_create(&listaTecnicos[i].hiloTecnico, NULL, accionesTecnico, "Tecnico creado");
     }
 
     //Creacion de los hilos de los responsables
-    for(i=0; i<numResponsables; i++){
+    for(int i=0; i<numResponsables; i++){
         listaResponsables[i].id=i;
         listaResponsables[i].count=0;
         pthread_create(&listaResponsables[i].hiloResponsable, NULL, accionesresponsablesReparacion, "Respondable creado");
@@ -169,6 +168,9 @@ int main(int argc, char *argv[]){
     
     sleep(1);
     printf("Fin del programa\n");
+    free(listaClientes);
+    free(listaTecnicos);
+    free(listaResponsables);
 
     return 0;
 }
@@ -210,6 +212,7 @@ void nuevoClienteRed(int signal) {
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
         pthread_create(&listaClientes[contadorPeticiones].hiloCliente,NULL,accionesCliente,(void *)(intptr_t)contadorPeticiones);
         contadorPeticiones++;
+        free(contadorClientes);
         pthread_mutex_unlock(&semaforoColaClientes);
     } 
 }
@@ -229,6 +232,7 @@ void nuevoClienteApp(int signal) {
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
         pthread_create(&listaClientes[contadorPeticiones].hiloCliente,NULL,accionesCliente,(void *)(intptr_t)contadorPeticiones);
         contadorPeticiones++;
+        free(contadorClientes);
         pthread_mutex_unlock(&semaforoColaClientes);
     } 
 }
