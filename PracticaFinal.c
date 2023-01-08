@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -8,6 +9,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 
 //Estructuras
 struct Clientes{
@@ -200,7 +202,9 @@ void nuevoClienteRed(int signal) {
     }else{
         pthread_mutex_lock(&semaforoColaClientes);
         contadorClientesRed++;
-        listaClientes[contadorPeticiones].id = strdup("clired_%d",contadorClientesRed);
+        char *contadorClientes;
+        asprintf(&contadorClientes, "%d", contadorClientesRed);
+        listaClientes[contadorPeticiones].id = strcat("clired_%d",contadorClientes);
         listaClientes[contadorPeticiones].atendido = 0;
         listaClientes[contadorPeticiones].tipo = 'r';
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
@@ -217,7 +221,9 @@ void nuevoClienteApp(int signal) {
     }else{
         pthread_mutex_lock(&semaforoColaClientes);
         contadorClientesApp++;
-        listaClientes[contadorPeticiones].id = strdup("cliapp_%d",contadorClientesApp);
+        char *contadorClientes;
+        asprintf(&contadorClientes, "%d", contadorClientesApp);
+        listaClientes[contadorPeticiones].id = strcat("cliapp_",contadorClientes);
         listaClientes[contadorPeticiones].atendido = 0;
         listaClientes[contadorPeticiones].tipo = 'a';
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
@@ -232,14 +238,14 @@ void manejadora_fin(int signal){
     printf("La llegada de solicitudes ha sido desactivada");
     escribirEnLog("FINAL","La llegada de solicitudes ha sido desactivada");
     while(1==1){
-        phtread_mutex_lock(&semaforoSolicitudes);
+        pthread_mutex_lock(&semaforoSolicitudes);
         if(contadorPeticiones==0){
-            phtread_mutex_unlock(&semaforoSolicitudes);
+            pthread_mutex_unlock(&semaforoSolicitudes);
             printf("Saliendo del programa");
             escribirEnLog("TERMINADO","Saliendo del programa");
             exit(0);
         }else{
-            phtread_mutex_unlock(&semaforoSolicitudes);
+            pthread_mutex_unlock(&semaforoSolicitudes);
             sleep(1);
         }
     }
