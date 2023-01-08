@@ -13,7 +13,7 @@
 
 //Estructuras
 struct Clientes{
-    char *id;
+    char id[20];
     //Estado del cliente: 0 = no atendido, 1 = en proceso de atencion y 2 = terminado de atender.
     int atendido;
     // a = clientes con problemas en la app y r = clientes con problemas de red.
@@ -204,7 +204,7 @@ void nuevoClienteRed(int signal) {
         contadorClientesRed++;
         char *contadorClientes;
         asprintf(&contadorClientes, "%d", contadorClientesRed);
-        listaClientes[contadorPeticiones].id = strcat("clired_%d",contadorClientes);
+        strcpy(listaClientes[contadorPeticiones].id, strcat("clired_", contadorClientes));
         listaClientes[contadorPeticiones].atendido = 0;
         listaClientes[contadorPeticiones].tipo = 'r';
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
@@ -223,7 +223,7 @@ void nuevoClienteApp(int signal) {
         contadorClientesApp++;
         char *contadorClientes;
         asprintf(&contadorClientes, "%d", contadorClientesApp);
-        listaClientes[contadorPeticiones].id = strcat("cliapp_",contadorClientes);
+        strcpy(listaClientes[contadorPeticiones].id, strcat("cliapp_", contadorClientes));
         listaClientes[contadorPeticiones].atendido = 0;
         listaClientes[contadorPeticiones].tipo = 'a';
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
