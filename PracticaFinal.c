@@ -98,11 +98,15 @@ int main(int argc, char *argv[]){
     contadorClientesApp = 0;
     contadorClientesRed = 0;
     nSolicitudesDomiciliarias = 0;
+    
+    //Definicion de los punteros de las listas de clientes, tecnicos y responsables
     listaClientes =(struct Clientes*) malloc(sizeof(struct Clientes) * 20);
     listaTecnicos =(struct Tecnico*) malloc(sizeof(struct Tecnico) * numTecnicos);
     listaResponsables =(struct ResponsableReps*) malloc(sizeof(struct ResponsableReps) * numResponsables);
     srand(getpid());
     fclose(ficheroLogs);
+    
+    
     //Controlamos argumentos programa
 	switch(argc){
 		case 1:
@@ -112,12 +116,16 @@ int main(int argc, char *argv[]){
 		    printf("WARNING: Este programa no contempla el uso de parametros de entrada, se procede a ignorar los parametros introducidos continuar la ejecución por defecto");
 		    break;
 	}
+
+
     //Crear el archivo donde se almacenen los logs
     ficheroLogs = fopen("registroTiempos.log" , "wt");
     if(ficheroLogs == NULL){
         perror("Error en la apertura del archivo de logs");
         exit(-1);
     }
+
+    
     //Creamos los semaforos que usaremos luego
     if (pthread_mutex_init(&semaforoFichero, NULL) != 0) {
         perror("Error en la creacion del semaforo de Ficheros");
