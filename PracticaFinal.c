@@ -195,6 +195,20 @@ void escribirEnLog(char *id, char *mensaje){
     pthread_mutex_unlock(&semaforoFichero);
 }
 
+//Metodo que va a compactar la lista de clientes cuando un cliente se marche, ya sea por haber sido atendido o porque abandona la cola por otros motivos
+void compactarListaClientes(int pos){
+    
+    pthread_mutex_lock(&semaforoColaClientes);
+    int i=0;
+    for(i=pos; i<contadorPeticiones-1; i++){
+        //Para compactar, se mueven elementos de las posiciones siguientes a la pasada como parámetro una posicion a la izquierda
+        listaClientes[i] = listaClientes[i+1];
+    }
+    contadorPeticiones--;
+    pthread_mutex_unlock(&semaforoColaClientes);
+
+}
+
 //Estas funciones las realizaran los distintos thread
 void nuevoClienteRed(int signal) {
     printf("Nueva peticion cliente red, actualmente hay %d peticiones.\n", contadorPeticiones+1);
@@ -254,8 +268,13 @@ void manejadora_fin(int signal){
         }
     }
 }
+
+
+//codigo de todo el proceso que realizan los clientes en la app
 void *accionesCliente() {
-    //codigo de todo el proceso que realizan los clientes en la app
+    
+
+
 }
 void *accionesTecnico(void *arg) {
     printf("%s\n", (char *)arg);
