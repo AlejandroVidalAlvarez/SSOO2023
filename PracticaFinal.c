@@ -20,6 +20,8 @@ struct Clientes{
     char tipo;
     //Su valor va desde 1 hasta 10(ambos incluidos), siendo 1 la prioridad mas baja y 10 la más alta.
     int prioridad;
+    //SOLO CLINETES DE RED 0=todo en regla, 1=mal identificados y 2=compañia equivocada
+    int tipoDeAtencion;
     //Hilo que ejecutan los clientes
     pthread_t hiloCliente;
 };
@@ -224,6 +226,14 @@ void nuevoClienteRed(int signal) {
         listaClientes[contadorPeticiones].atendido = 0;
         listaClientes[contadorPeticiones].tipo = 'r';
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
+        int aux = calculaAleatorio(0,100);
+        if(aux<80){
+            listaClientes[contadorPeticiones].tipoDeAtencion=0;
+        }else if(80<aux<90){
+            listaClientes[contadorPeticiones].tipoDeAtencion=1;
+        }else{
+            listaClientes[contadorPeticiones].tipoDeAtencion=2;
+        }
         pthread_create(&listaClientes[contadorPeticiones].hiloCliente,NULL,accionesCliente,(void *)(intptr_t)contadorPeticiones);
         contadorPeticiones++;
         free(contadorClientes);
@@ -271,7 +281,37 @@ void manejadora_fin(int signal){
 
 
 //codigo de todo el proceso que realizan los clientes en la app
-void *accionesCliente() {
+void *accionesCliente(void *arg) {
+    
+    //mientras no esta siendo atendido, calculamos su comportamiento
+    while(listaClientes[(intptr_t)arg].atendido==0){
+        int num=0;
+        for(num=0; num<4; num++){
+            //10% de que se vayan por encontrar muy dificil la aplicacion(cada 2 segundos)
+            if(calculaAleatorio(0, 100)< 10){
+            compactarListaClientes((intptr_t)arg);
+            //no hace  falta decrementar el contador de peticiones porque lo decrementa el metodo de compactar
+            pthread_exit(NULL);
+            }
+            sleep(2);
+        }
+        //20% de que se vayan por cansarse de esperar(cada 8 segundos)
+        if(calculaAleatorio(0, 100)<20){
+            compactarListaClientes((intptr_t)arg);
+            pthread_exit(NULL);
+        }
+        //5% que pierde la conexion
+        if(calculaAleatorio(0, 100)<5){
+            compactarListaClientes((intptr_t)arg);
+            pthread_exit(NULL);
+        }
+    }
+   
+    //mientras esta siendo atendido, no hace nada
+    while(listaClientes[(intptr_t)arg].atendido!=2){
+        sleep(1);
+    }
+
     
 
 
