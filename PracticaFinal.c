@@ -133,16 +133,30 @@ int main(int argc, char *argv[]){
     }
     
 
-    pthread_t tecnico_1, tecnico_2;
-    pthread_create(&tecnico_1, NULL, accionesTecnico, "Creado el tecnico 1");
-    pthread_create(&tecnico_2, NULL, accionesTecnico, "Creado el tecnico 2");
-    pthread_t responsableReparacion_1, responsableReparacion_2;
-    pthread_create(&responsableReparacion_1, NULL, accionesresponsablesReparacion, "Creado el responsable 1");
-    pthread_create(&responsableReparacion_2, NULL, accionesresponsablesReparacion, "Creado el responsable 2");
+    //Creacion de los hilos de los tecnicos.
+    int i = 0;
+    for(i=0; i<numTecnicos; i++){
+        listaTecnicos[i].id=i;
+        listaTecnicos[i].count=0;
+        pthread_create(&listaTecnicos[i].hiloTecnico, NULL, accionesTecnico, "Tecnico creado");
+    }
+
+    //Creacion de los hilos de los responsables
+    for(i=0; i<numResponsables; i++){
+        listaResponsables[i].id=i;
+        listaResponsables[i].count=0;
+        pthread_create(&listaResponsables[i].hiloResponsable, NULL, accionesresponsablesReparacion, "Respondable creado");
+    }
+    
+    //Creacion del hilo encargado
     pthread_t encargado;
     pthread_create(&encargado, NULL, accionesEncargado, "Creado el encargado");
+    
+    //Creacion del hilo tecnico domiciliario
     pthread_t tecnicoDomiciliario;
     pthread_create(&tecnicoDomiciliario, NULL, accionesTecnicoDomiciliario, "Creado el tecnico domiciliario");
+    
+    
     sleep(1);
     printf("Fin del programa\n");
 
