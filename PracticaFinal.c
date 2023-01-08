@@ -106,7 +106,6 @@ int main(int argc, char *argv[]){
     listaTecnicos =(struct Tecnico*) malloc(sizeof(struct Tecnico) * numTecnicos);
     listaResponsables =(struct ResponsableReps*) malloc(sizeof(struct ResponsableReps) * numResponsables);
     srand(getpid());
-    fclose(ficheroLogs);
     
     
     //Controlamos argumentos programa
@@ -192,6 +191,7 @@ void escribirEnLog(char *id, char *mensaje){
     //Se escribe el mensaje en el fichero con la hora y el identificador
     ficheroLogs = fopen("registroTiempos.log", "a");
     fprintf(ficheroLogs, "[%s] %s: %s\n", stnow, id, mensaje);
+    fclose(ficheroLogs);
     pthread_mutex_unlock(&semaforoFichero);
 }
 
