@@ -5,13 +5,13 @@
 #include <pthread.h>
 #include <signal.h>
 #include <sys/types.h>
-//#include <sys/wait.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
 
 //Estructuras
 struct Clientes{
-    int id;
+    char *id;
     //Estado del cliente: 0 = no atendido, 1 = en proceso de atencion y 2 = terminado de atender.
     int atendido;
     // a = clientes con problemas en la app y r = clientes con problemas de red.
@@ -47,7 +47,7 @@ pthread_mutex_t semaforoSolicitudes;
 
 //Variables globales
 int peticionesMax;
-int countPeticiones;
+int contadorPeticiones;
 int numTecnicos;
 int numResponsables;
 int contadorClientesApp;
@@ -63,21 +63,23 @@ struct ResponsableReps *listaResponsables;
 int calculaAleatorio(int inicio, int fin);
 void escribirEnLog(char *id, char *mensaje);
 void nuevoClienteRed();
-void accionesCliente();
+void nuevoClienteApp();
+void *accionesCliente();
 void *accionesTecnico(void *arg);
 void *accionesEncargado(void *arg);
 void *accionesTecnicoDomiciliario(void *arg);
 void *accionesresponsablesReparacion(void *arg);
+void manejadora_fin();
 
 int main(int argc, char *argv[]){
 
 	struct sigaction sapp;
-	sapp.sa_handler = manejadora_clienteApp;
+	sapp.sa_handler = nuevoClienteApp;
     if(-1==sigaction(SIGUSR1, &sapp,NULL)){
 	      perror("ClienteAPP: sigaction\n");
 	      return -1;}
 	struct sigaction sred;
-	sred.sa_handler = manejadora_clienteRed;
+	sred.sa_handler = nuevoClienteRed;
 	if(-1 == sigaction(SIGUSR2, &sred, NULL)){
 		perror("ClienteRED: sigaction\n");
 		exit(-1);
@@ -90,7 +92,7 @@ int main(int argc, char *argv[]){
 	}
     //Asignar valores por defecto a algunas variables
     peticionesMax = 20;
-    countPeticiones = 0;
+    contadorPeticiones = 0;
     numTecnicos = 2;
     numResponsables = 2;
     contadorClientesApp = 0;
@@ -155,32 +157,74 @@ int calculaAleatorio(int inicio, int fin){
 
 void escribirEnLog(char *id, char *mensaje){
 
-    /*ESTA PARTE TENDRÁ QUE ESTAR CONTROLADA POR UN MUTEX*/
+    pthread_mutex_lock(&semaforoFichero);
     //Obtencion de la fecha y hora actuales
     time_t now = time(0);
     struct tm *tlocal = localtime(&now);
     char stnow[25];
     strftime(stnow, 25, "%d/ %m/ %y %H: %M: %S", tlocal);
-
     //Se escribe el mensaje en el fichero con la hora y el identificador
-    //Bloquea el semaforo del fichero para que nadie pueda acceder a el.
-    pthread_mutex_lock(&semaforoFichero);
     ficheroLogs = fopen("registroTiempos.log", "a");
     fprintf(ficheroLogs, "[%s] %s: %s\n", stnow, id, mensaje);
     pthread_mutex_unlock(&semaforoFichero);
 }
 
 //Estas funciones las realizaran los distintos thread
-void nuevoClienteRed() {
-    pthread_mutex_lock(&semaforoColaClientes);
-    //Dentro del mutex solo tiene que estar el codigo de la zona critica.
-    pthread_mutex_unlock(&semaforoColaClientes);
-}
-
-void accionesCliente() {
+void nuevoClienteRed(int signal) {
+    printf("Nueva peticion cliente red, actualmente hay %d peticiones.\n", contadorPeticiones+1);
     
+    if(contadorPeticiones>=peticionesMax){
+        printf("Peticion ignorada");
+    }else{
+        pthread_mutex_lock(&semaforoColaClientes);
+        contadorClientesRed++;
+        listaClientes[contadorPeticiones].id = strdup("clired_%d",contadorClientesRed);
+        listaClientes[contadorPeticiones].atendido = 0;
+        listaClientes[contadorPeticiones].tipo = 'r';
+        listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
+        pthread_create(&listaClientes[contadorPeticiones].hiloCliente,NULL,accionesCliente,(void *)(intptr_t)contadorPeticiones);
+        contadorPeticiones++;
+        pthread_mutex_unlock(&semaforoColaClientes);
+    } 
+}
+void nuevoClienteApp(int signal) {
+    printf("Nueva peticion cliente app, actualmente hay %d peticiones.\n", contadorPeticiones+1);
+    
+    if(contadorPeticiones>=peticionesMax){
+        printf("Peticion ignorada");
+    }else{
+        pthread_mutex_lock(&semaforoColaClientes);
+        contadorClientesApp++;
+        listaClientes[contadorPeticiones].id = strdup("cliapp_%d",contadorClientesApp);
+        listaClientes[contadorPeticiones].atendido = 0;
+        listaClientes[contadorPeticiones].tipo = 'a';
+        listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
+        pthread_create(&listaClientes[contadorPeticiones].hiloCliente,NULL,accionesCliente,(void *)(intptr_t)contadorPeticiones);
+        contadorPeticiones++;
+        pthread_mutex_unlock(&semaforoColaClientes);
+    } 
 }
 
+
+void manejadora_fin(int signal){
+    printf("La llegada de solicitudes ha sido desactivada");
+    escribirEnLog("FINAL","La llegada de solicitudes ha sido desactivada");
+    while(1==1){
+        phtread_mutex_lock(&semaforoSolicitudes);
+        if(contadorPeticiones==0){
+            phtread_mutex_unlock(&semaforoSolicitudes);
+            printf("Saliendo del programa");
+            escribirEnLog("TERMINADO","Saliendo del programa");
+            exit(0);
+        }else{
+            phtread_mutex_unlock(&semaforoSolicitudes);
+            sleep(1);
+        }
+    }
+}
+void *accionesCliente() {
+    //codigo de todo el proceso que realizan los clientes en la app
+}
 void *accionesTecnico(void *arg) {
     printf("%s\n", (char *)arg);
     pthread_exit(NULL);
