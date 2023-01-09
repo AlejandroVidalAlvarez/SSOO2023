@@ -79,6 +79,7 @@ void *accionesTecnicoDomiciliario(void *arg);
 void *accionesresponsablesReparacion(void *arg);
 void manejadora_fin();
 int buscarPrioridad(char tipo);
+void ponerComoAtendido(char idBuscado[20]);
 void compactarListaClientes(int pos);
 int comprobarDescansoTecnico(void *arg);
 void sumarContadorTecnico(void *arg);
@@ -201,8 +202,10 @@ void nuevoClienteRed(int signal) {
         contadorClientesRed++;
         strcpy(listaClientes[contadorPeticiones].id, "clired_"+contadorClientesRed);
         listaClientes[contadorPeticiones].atendido = 0;
+        printf("Atributo atendido asignado\n");
         listaClientes[contadorPeticiones].tipo = 'r';
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
+        printf("Prioridad asignada\n");
         int aux = calculaAleatorio(0,100);
         if(aux<80){
             listaClientes[contadorPeticiones].tipoDeAtencion=0;
@@ -301,7 +304,7 @@ void *accionesCliente(void *arg) {
    
     //mientras esta siendo atendido, no hace nada
     while(listaClientes[(intptr_t)arg].atendido==1){
-        printf("Estoy siendo atendido");
+        //printf("Estoy siendo atendido");
         sleep(1);
     }
 
@@ -345,13 +348,19 @@ void *accionesTecnico(void *arg) {
             
         }
         pthread_mutex_lock(&semaforoColaClientes);
+        printf("Bloqueo semaforo");
         if (contadorClientesApp > 0) {
-            
+            printf("Entro al if de contadorClientes\n");
             int prioridadMaxima = buscarPrioridad('a');
             
             for (int i = 0; i<contadorPeticiones; i++) {
                 if (listaClientes[i].atendido==0 && listaClientes[i].prioridad == prioridadMaxima && listaClientes[i].tipo == 'a') {
+                    //printf("")
                     listaClientes[i].atendido = 1; 
+                    char idDelAtendido[20];
+                    strcpy(idDelAtendido, listaClientes[i].id);
+                    pthread_mutex_unlock(&semaforoColaClientes);
+                    printf("Desbloqueo semaforo antes de los ifs\n");
                     int probabilidad = calculaAleatorio(1, 100); 
                     if (probabilidad <= 80) {
                         listaClientes[i].tipoDeAtencion = 0;
@@ -369,19 +378,26 @@ void *accionesTecnico(void *arg) {
                         sleep(calculaAleatorio(1,2));
                         escribirEnLog("Tecnico", "fin de atencion al cliente");
                     }
-                    listaClientes[i].atendido = 2;
-                    sumarContadorTecnico(arg);
+                    pthread_mutex_lock(&semaforoColaClientes);
+                    printf("Bloqueo semaforo antes de poner como atendido\n");
+                    ponerComoAtendido(idDelAtendido);
                     pthread_mutex_unlock(&semaforoColaClientes);
+                    printf("Desbloqueo semaforo despues de poner como atendido\n");
+                    sumarContadorTecnico(arg);
+                    //pthread_mutex_unlock(&semaforoColaClientes);
                     break;
                 }else{
-                    if(i<=contadorPeticiones-1){
+                    //printf("No he atendido a nadie de la cola\n");
+                    if(i==contadorPeticiones-1){
                         pthread_mutex_unlock(&semaforoColaClientes);
+                        printf("Desbloqueo semaforo porque termina el for");
                     }
                 }
             }
             
         } else {
             pthread_mutex_unlock(&semaforoColaClientes);
+            printf("Desbloqueo semaforo porque la cola de clientes esta vacia\n");
             sleep(1);
         }
     }
@@ -406,6 +422,18 @@ int calculaAleatorio(int inicio, int fin){
     srand(time(NULL)); 
     return rand() % (fin-inicio+1) + inicio;
 }
+
+void ponerComoAtendido(char idBuscado[20]){
+
+    for (int i = 0; i<contadorPeticiones; i++) {
+        if (listaClientes[i].id == idBuscado ) {
+            listaClientes[i].atendido=2;
+            break;
+        }
+    }
+
+}
+
 int buscarPrioridad(char tipo) {
 
     int maximo = 0;
@@ -442,6 +470,7 @@ void sumarContadorTecnico(void *arg){
     for (int i = 0; i<2; i++) {
         if (listaTecnicos[i].id == (char *)arg) {
             listaTecnicos[i].count++;
+            printf("Llevp %d atendidos\n", listaTecnicos[i].count);
             return;
         }
     }
