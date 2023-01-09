@@ -31,7 +31,7 @@ struct Clientes{
 };
 struct Tecnico{
     //Identificador para los tecnicos, como en este caso solo se disponen de 2 tecnicos, su valor sera 1 o 2.
-    int id;
+    char id[20];
     //Contador de clientes  atendidos, en el momento que llegue a 5, se tomará un descanso de 5 segundos
     int count;
     //Hilo que ejecutan los tecnicos
@@ -39,7 +39,7 @@ struct Tecnico{
 };
 struct ResponsableReps{
     //Identificador que funciona igual que el del tecnico, su valor sera 1 o 2 puesto que solo se disponen de 2 responsables.
-    int id;
+    char id[20];
     //Contador de clientes  atendidos, en el momento que llegue a 6, se tomará un descanso de 6 segundos
     int count;
     //Hilo que ejecutan los responsables
