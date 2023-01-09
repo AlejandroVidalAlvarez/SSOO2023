@@ -10,7 +10,12 @@
 #include <errno.h>
 #include <string.h>
 
-//Estructuras
+/*BORRAR ANTES DE ENTREGAR---> Para haceros la vida mas facil
+    CONTROL + K y luego CONTROL + 0 --->PLEGAR TODOS LOS METODOS
+    CONTROL + K y luego CONTROL + J --->DESPLEGAR TODOS LOS METODOS
+*/
+
+//[][][][] Estructuras [][][][]
 struct Clientes{
     char id[20];
     //Estado del cliente: 0 = no atendido, 1 = en proceso de atencion y 2 = terminado de atender.
@@ -24,7 +29,6 @@ struct Clientes{
     //Hilo que ejecutan los clientes
     pthread_t hiloCliente;
 };
-
 struct Tecnico{
     //Identificador para los tecnicos, como en este caso solo se disponen de 2 tecnicos, su valor sera 1 o 2.
     int id;
@@ -33,7 +37,6 @@ struct Tecnico{
     //Hilo que ejecutan los tecnicos
     pthread_t hiloTecnico;
 };
-
 struct ResponsableReps{
     //Identificador que funciona igual que el del tecnico, su valor sera 1 o 2 puesto que solo se disponen de 2 responsables.
     int id;
@@ -42,14 +45,15 @@ struct ResponsableReps{
     //Hilo que ejecutan los responsables
     pthread_t hiloResponsable;
 };
-//Semaforos y variables condición
+
+//[][][][] Semaforos y variables condición [][][][]
 pthread_mutex_t semaforoFichero;
 pthread_mutex_t semaforoColaClientes;
 pthread_mutex_t semaforoSolicitudes;
 pthread_mutex_t semaforoSolicitudesDomiciliarias;
 
 
-//Variables globales
+//[][][][]  Variables globales  [][][][]
 int peticionesMax;
 int contadorPeticiones;
 int numTecnicos;
@@ -62,8 +66,7 @@ FILE *ficheroLogs;
 struct Tecnico *listaTecnicos;
 struct ResponsableReps *listaResponsables;
 
-
-//Definicion de las funciones
+//[][][][]  Definicion de las funciones  [][][][]
 int calculaAleatorio(int inicio, int fin);
 void escribirEnLog(char *id, char *mensaje);
 void nuevoClienteRed();
@@ -151,16 +154,17 @@ int main(int argc, char *argv[]){
 
     //Creacion de los hilos de los tecnicos.
     for(int i=0; i<numTecnicos; i++){
+        strcpy(listaTecnicos[i].id, "tecnico_"+(i+1));
         listaTecnicos[i].id=i;
         listaTecnicos[i].count=0;
-        pthread_create(&listaTecnicos[i].hiloTecnico, NULL, accionesTecnico, "Tecnico creado");
+        pthread_create(&listaTecnicos[i].hiloTecnico, NULL, accionesTecnico, ("Tecnico %d creado",(i+1)));
     }
 
     //Creacion de los hilos de los responsables
     for(int i=0; i<numResponsables; i++){
-        listaResponsables[i].id=i;
+        strcpy(listaResponsables[i].id, "resprep_"+(i+1));
         listaResponsables[i].count=0;
-        pthread_create(&listaResponsables[i].hiloResponsable, NULL, accionesresponsablesReparacion, "Respondable creado");
+        pthread_create(&listaResponsables[i].hiloResponsable, NULL, accionesresponsablesReparacion, ("Respondable %d creado",(i+1)));
     }
     
     //Creacion del hilo encargado
@@ -182,42 +186,7 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-
-int calculaAleatorio(int inicio, int fin){
-    srand(time(NULL)); 
-    return rand() % (fin-inicio+1) + inicio;
-}
-
-void escribirEnLog(char *id, char *mensaje){
-
-    pthread_mutex_lock(&semaforoFichero);
-    //Obtencion de la fecha y hora actuales
-    time_t now = time(0);
-    struct tm *tlocal = localtime(&now);
-    char stnow[25];
-    strftime(stnow, 25, "%d/ %m/ %y %H: %M: %S", tlocal);
-    //Se escribe el mensaje en el fichero con la hora y el identificador
-    ficheroLogs = fopen("registroTiempos.log", "a");
-    fprintf(ficheroLogs, "[%s] %s: %s\n", stnow, id, mensaje);
-    fclose(ficheroLogs);
-    pthread_mutex_unlock(&semaforoFichero);
-}
-
-//Metodo que va a compactar la lista de clientes cuando un cliente se marche, ya sea por haber sido atendido o porque abandona la cola por otros motivos
-void compactarListaClientes(int pos){
-    
-    pthread_mutex_lock(&semaforoColaClientes);
-    int i=0;
-    for(i=pos; i<contadorPeticiones-1; i++){
-        //Para compactar, se mueven elementos de las posiciones siguientes a la pasada como parámetro una posicion a la izquierda
-        listaClientes[i] = listaClientes[i+1];
-    }
-    contadorPeticiones--;
-    pthread_mutex_unlock(&semaforoColaClientes);
-
-}
-
-//Estas funciones las realizaran los distintos thread
+//[][][][]  Metodos Llegada Señales  [][][][]
 void nuevoClienteRed(int signal) {
     printf("Nueva peticion cliente red, actualmente hay %d peticiones.\n", contadorPeticiones+1);
     
@@ -260,8 +229,6 @@ void nuevoClienteApp(int signal) {
         pthread_mutex_unlock(&semaforoColaClientes);
     } 
 }
-
-
 void manejadora_fin(int signal){
     printf("La llegada de solicitudes ha sido desactivada\n");
     escribirEnLog("FINAL","La llegada de solicitudes ha sido desactivada");
@@ -280,7 +247,7 @@ void manejadora_fin(int signal){
 }
 
 
-//codigo de todo el proceso que realizan los clientes en la app
+//[][][][]  Metodos Tareas Principales  [][][][]
 void *accionesCliente(void *arg) {
     
     //mientras no esta siendo atendido, calculamos su comportamiento
@@ -297,16 +264,16 @@ void *accionesCliente(void *arg) {
         }
         //20% de que se vayan por cansarse de esperar(cada 8 segundos)
         if(calculaAleatorio(0, 100)<20){
-            pthread_mutex_lock(semaforoSolicitudes);
+            pthread_mutex_lock(&semaforoSolicitudes);
             compactarListaClientes((intptr_t)arg);
-            pthread_mutex_unlock(semaforoSolicitudes);
+            pthread_mutex_unlock(&semaforoSolicitudes);
             pthread_exit(NULL);
         }
         //5% que pierde la conexion
         if(calculaAleatorio(0, 100)<5){
-            pthread_mutex_lock(semaforoSolicitudes);
+            pthread_mutex_lock(&semaforoSolicitudes);
             compactarListaClientes((intptr_t)arg);
-            pthread_mutex_unlock(semaforoSolicitudes);
+            pthread_mutex_unlock(&semaforoSolicitudes);
             pthread_exit(NULL);
         }
     }
@@ -318,25 +285,25 @@ void *accionesCliente(void *arg) {
 
     //en caso de ser un cliente de app, abandona la lista, si es de red podria solicitar atencion domiciliaria
     if(listaClientes[(intptr_t)arg].tipo=='a'){
-        pthread_mutex_lock(semaforoSolicitudes);
+        pthread_mutex_lock(&semaforoSolicitudes);
         compactarListaClientes((intptr_t)arg);
-        pthread_mutex_unlock(semaforoSolicitudes);
+        pthread_mutex_unlock(&semaforoSolicitudes);
         pthread_exit(NULL);
     }else{
         if(calculaAleatorio(0,100)<30){ //caso de pedir atencion domiciliaria
             
-        pthread_mutex_lock(semaforoSolicitudesDomiciliarias);
+        pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
         if(nSolicitudesDomiciliarias<4){
             nSolicitudesDomiciliarias++;
         }
-        pthread_mutex_unlock(semaforoSolicitudesDomiciliarias);
+        pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
 
         
 
         }else{
-            pthread_mutex_lock(semaforoSolicitudes);
+            pthread_mutex_lock(&semaforoSolicitudes);
             compactarListaClientes((intptr_t)arg);
-            pthread_mutex_unlock(semaforoSolicitudes);
+            pthread_mutex_unlock(&semaforoSolicitudes);
             pthread_exit(NULL);
         }
     }
@@ -381,23 +348,27 @@ void *accionesTecnico(void *arg) {
     }
     pthread_exit(NULL);
 }
-
 void *accionesEncargado(void *arg) {
     printf("%s\n", (char *)arg);
     pthread_exit(NULL);
 }
-
 void *accionesTecnicoDomiciliario(void *arg) {
     printf("%s\n", (char *)arg);
     pthread_exit(NULL);
 }
-
 void *accionesresponsablesReparacion(void *arg) {
     printf("%s\n", (char *)arg);
     pthread_exit(NULL);
 }
 
+
+//[][][][]  Metodos auxiliares  [][][][]
+int calculaAleatorio(int inicio, int fin){
+    srand(time(NULL)); 
+    return rand() % (fin-inicio+1) + inicio;
+}
 int buscarPrioridad(char tipo) {
+
     int maximo = 0;
     for (int i = 0; i<contadorPeticiones; i++) {
         if (listaClientes[i].tipo == tipo && maximo < listaClientes[i].prioridad) {
@@ -406,4 +377,30 @@ int buscarPrioridad(char tipo) {
     }
     printf("%d", maximo);
     return maximo;
+}
+void compactarListaClientes(int pos){ 
+    //Metodo que va a compactar la lista de clientes cuando un cliente se marche, ya sea por haber sido atendido o porque abandona la cola por otros motivos
+    pthread_mutex_lock(&semaforoColaClientes);
+    int i=0;
+    for(i=pos; i<contadorPeticiones-1; i++){
+        //Para compactar, se mueven elementos de las posiciones siguientes a la pasada como parámetro una posicion a la izquierda
+        listaClientes[i] = listaClientes[i+1];
+    }
+    contadorPeticiones--;
+    pthread_mutex_unlock(&semaforoColaClientes);
+
+}
+void escribirEnLog(char *id, char *mensaje){
+
+    pthread_mutex_lock(&semaforoFichero);
+    //Obtencion de la fecha y hora actuales
+    time_t now = time(0);
+    struct tm *tlocal = localtime(&now);
+    char stnow[25];
+    strftime(stnow, 25, "%d/ %m/ %y %H: %M: %S", tlocal);
+    //Se escribe el mensaje en el fichero con la hora y el identificador
+    ficheroLogs = fopen("registroTiempos.log", "a");
+    fprintf(ficheroLogs, "[%s] %s: %s\n", stnow, id, mensaje);
+    fclose(ficheroLogs);
+    pthread_mutex_unlock(&semaforoFichero);
 }
