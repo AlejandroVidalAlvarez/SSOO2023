@@ -49,7 +49,6 @@ struct ResponsableReps{
 //[][][][] Semaforos y variables condición [][][][]
 pthread_mutex_t semaforoFichero;
 pthread_mutex_t semaforoColaClientes;
-pthread_mutex_t semaforoSolicitudes;
 pthread_mutex_t semaforoSolicitudesDomiciliarias;
 
 
@@ -65,6 +64,8 @@ struct Clientes *listaClientes;
 FILE *ficheroLogs;
 struct Tecnico *listaTecnicos;
 struct ResponsableReps *listaResponsables;
+int ignorarSolicitudes;
+
 
 //[][][][]  Definicion de las funciones  [][][][]
 int calculaAleatorio(int inicio, int fin);
@@ -78,6 +79,10 @@ void *accionesTecnicoDomiciliario(void *arg);
 void *accionesresponsablesReparacion(void *arg);
 void manejadora_fin();
 int buscarPrioridad(char tipo);
+void compactarListaClientes(int pos);
+int comprobarDescansoTecnico(void *arg);
+void sumarContadorTecnico(void *arg);
+void resetearContadorTecnico(void *arg);
 
 int main(int argc, char *argv[]){
 
@@ -106,6 +111,7 @@ int main(int argc, char *argv[]){
     contadorClientesApp = 0;
     contadorClientesRed = 0;
     nSolicitudesDomiciliarias = 0;
+    ignorarSolicitudes = 0;
     
     //Definicion de los punteros de las listas de clientes, tecnicos y responsables
     listaClientes =(struct Clientes*) malloc(sizeof(struct Clientes) * peticionesMax);
@@ -142,10 +148,6 @@ int main(int argc, char *argv[]){
         perror("Error en la creacion del semaforo de la cola de clientes");
         exit (-1);
     }
-    if (pthread_mutex_init(&semaforoSolicitudes, NULL) != 0) {
-        perror("Error en la creacion del semaforo de solicitudes");
-        exit (-1);
-    }
     if (pthread_mutex_init(&semaforoSolicitudesDomiciliarias, NULL) != 0) {
         perror("Error en la creacion del semaforo de solicitudes");
         exit (-1);
@@ -154,15 +156,14 @@ int main(int argc, char *argv[]){
 
     //Creacion de los hilos de los tecnicos.
     for(int i=0; i<numTecnicos; i++){
-        strcpy(listaTecnicos[i].id, "tecnico_"+(i+1));
-        listaTecnicos[i].id=i;
+        sprintf(listaTecnicos[i].id,"tecnico_%d",(i+1));
         listaTecnicos[i].count=0;
-        pthread_create(&listaTecnicos[i].hiloTecnico, NULL, accionesTecnico, ("Tecnico creado"));
+        pthread_create(&listaTecnicos[i].hiloTecnico, NULL, accionesTecnico, (void *)(intptr_t)listaTecnicos[i].id);
     }
 
     //Creacion de los hilos de los responsables
     for(int i=0; i<numResponsables; i++){
-        strcpy(listaResponsables[i].id, "resprep_"+(i+1));
+        sprintf(listaResponsables[i].id,"resprep_%d",(i+1));
         listaResponsables[i].count=0;
         pthread_create(&listaResponsables[i].hiloResponsable, NULL, accionesresponsablesReparacion, ("Respondable creado"));
     }
@@ -188,6 +189,9 @@ int main(int argc, char *argv[]){
 
 //[][][][]  Metodos Llegada Señales  [][][][]
 void nuevoClienteRed(int signal) {
+    if(ignorarSolicitudes==1){
+        return;
+    }
     printf("Nueva peticion cliente red, actualmente hay %d peticiones.\n", contadorPeticiones+1);
     
     if(contadorPeticiones>=peticionesMax){
@@ -213,6 +217,9 @@ void nuevoClienteRed(int signal) {
     } 
 }
 void nuevoClienteApp(int signal) {
+    if(ignorarSolicitudes==1){
+        return;
+    }
     printf("Nueva peticion cliente app, actualmente hay %d peticiones.\n", contadorPeticiones+1);
     
     if(contadorPeticiones>=peticionesMax){
@@ -231,6 +238,7 @@ void nuevoClienteApp(int signal) {
 }
 void manejadora_fin(int signal){
     printf("La llegada de solicitudes ha sido desactivada\n");
+    ignorarSolicitudes = 1;
     escribirEnLog("FINAL","La llegada de solicitudes ha sido desactivada");
     while(1==1){
         pthread_mutex_lock(&semaforoColaClientes);
@@ -240,6 +248,7 @@ void manejadora_fin(int signal){
             escribirEnLog("TERMINADO","Saliendo del programa");
             exit(0);
         }else{
+            printf("Peticiones-->%d",contadorPeticiones);
             pthread_mutex_unlock(&semaforoColaClientes);
             sleep(1);
         }
@@ -249,46 +258,58 @@ void manejadora_fin(int signal){
 
 //[][][][]  Metodos Tareas Principales  [][][][]
 void *accionesCliente(void *arg) {
-    int posicionArgumento = (intptr_t)arg;
-    //mientras no esta siendo atendido, calculamos su comportamiento
-    while(listaClientes[(intptr_t)arg].atendido==0){
-        int num=0;
-        for(num=0; num<4; num++){
-            //10% de que se vayan por encontrar muy dificil la aplicacion(cada 2 segundos)
-            if(calculaAleatorio(0, 100)< 10){
+    intptr_t posicionArgumento1 = (intptr_t)arg;
+    int posicionArgumento = (int)posicionArgumento1;
 
+    int contador;
+    //mientras no esta siendo atendido, calculamos su comportamiento
+    while(listaClientes[posicionArgumento].atendido==0){
+        int aleat=calculaAleatorio(1, 100);
+        if(contador%2==0){
+           if(aleat <= 10){
+            pthread_mutex_lock(&semaforoColaClientes);
             compactarListaClientes(posicionArgumento);
-            //no hace  falta decrementar el contador de peticiones porque lo decrementa el metodo de compactar
+            pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);
             }
-            sleep(2);
         }
-        //20% de que se vayan por cansarse de esperar(cada 8 segundos)
-        if(calculaAleatorio(0, 100)<20){
-            pthread_mutex_lock(&semaforoSolicitudes);
+        if(contador%8==0){
+           if(aleat > 10 && aleat <= 30){
+            pthread_mutex_lock(&semaforoColaClientes);
             compactarListaClientes(posicionArgumento);
-            pthread_mutex_unlock(&semaforoSolicitudes);
+            pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);
+            }
         }
-        //5% que pierde la conexion
-        if(calculaAleatorio(0, 100)<5){
-            pthread_mutex_lock(&semaforoSolicitudes);
+        if(contador%2==0){
+           if(aleat > 30){
+            if(calculaAleatorio(1,100)>95){
+            pthread_mutex_lock(&semaforoColaClientes);
             compactarListaClientes(posicionArgumento);
-            pthread_mutex_unlock(&semaforoSolicitudes);
-            pthread_exit(NULL);
+            pthread_mutex_unlock(&semaforoColaClientes);
+            pthread_exit(NULL);  
+            }
+            }
         }
+        if(contador%8==0){
+            contador = 0;
+        }
+        contador++;
+        sleep(1);
     }
+
    
     //mientras esta siendo atendido, no hace nada
-    while(listaClientes[(intptr_t)arg].atendido!=2){
+    while(listaClientes[(intptr_t)arg].atendido==1){
+        printf("Estoy siendo atendido");
         sleep(1);
     }
 
     //en caso de ser un cliente de app, abandona la lista, si es de red podria solicitar atencion domiciliaria
     if(listaClientes[(intptr_t)arg].tipo=='a'){
-        pthread_mutex_lock(&semaforoSolicitudes);
+        pthread_mutex_lock(&semaforoColaClientes);
         compactarListaClientes((intptr_t)arg);
-        pthread_mutex_unlock(&semaforoSolicitudes);
+        pthread_mutex_unlock(&semaforoColaClientes);
         pthread_exit(NULL);
     }else{
         if(calculaAleatorio(0,100)<30){ //caso de pedir atencion domiciliaria
@@ -302,9 +323,9 @@ void *accionesCliente(void *arg) {
         
 
         }else{
-            pthread_mutex_lock(&semaforoSolicitudes);
+            pthread_mutex_lock(&semaforoColaClientes);
             compactarListaClientes((intptr_t)arg);
-            pthread_mutex_unlock(&semaforoSolicitudes);
+            pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);
         }
     }
@@ -312,16 +333,26 @@ void *accionesCliente(void *arg) {
 
 }
 void *accionesTecnico(void *arg) {
-    printf("%s\n", (char *)arg);
+    
+    printf("Creado %s\n", (char *)arg);
     while (1==1) {
+        if(comprobarDescansoTecnico(arg)>=5){
+            
+            printf("Comienza descanso, contador peticiones=%d\n",comprobarDescansoTecnico(arg));
+            resetearContadorTecnico(arg);
+            sleep(5);
+            printf("Termina descanso, contador peticiones=%d\n",comprobarDescansoTecnico(arg));
+            
+        }
         pthread_mutex_lock(&semaforoColaClientes);
         if (contadorClientesApp > 0) {
-            pthread_mutex_unlock(&semaforoColaClientes);
+            
             int prioridadMaxima = buscarPrioridad('a');
+            
             for (int i = 0; i<contadorPeticiones; i++) {
-                if (listaClientes[i].prioridad == prioridadMaxima && listaClientes[i].tipo == 'a') {
-                    listaClientes[i].atendido = 1;
-                    int probabilidad = calculaAleatorio(1, 100);
+                if (listaClientes[i].atendido==0 && listaClientes[i].prioridad == prioridadMaxima && listaClientes[i].tipo == 'a') {
+                    listaClientes[i].atendido = 1; 
+                    int probabilidad = calculaAleatorio(1, 100); 
                     if (probabilidad <= 80) {
                         listaClientes[i].tipoDeAtencion = 0;
                         escribirEnLog("Tecnico", "atendiendo a cliente");
@@ -339,9 +370,16 @@ void *accionesTecnico(void *arg) {
                         escribirEnLog("Tecnico", "fin de atencion al cliente");
                     }
                     listaClientes[i].atendido = 2;
+                    sumarContadorTecnico(arg);
+                    pthread_mutex_unlock(&semaforoColaClientes);
+                    break;
+                }else{
+                    if(i<=contadorPeticiones-1){
+                        pthread_mutex_unlock(&semaforoColaClientes);
+                    }
                 }
-
             }
+            
         } else {
             pthread_mutex_unlock(&semaforoColaClientes);
             sleep(1);
@@ -376,19 +414,50 @@ int buscarPrioridad(char tipo) {
             maximo = listaClientes[i].prioridad;
         }
     }
-    printf("%d", maximo);
+    
     return maximo;
+}
+int comprobarDescansoTecnico(void *arg) {
+
+    int num = 0;
+    for (int i = 0; i<2; i++) {
+        if (listaTecnicos[i].id == (char *)arg) {
+            return listaTecnicos[i].count;
+        }
+    }
+    printf("Error, no se encontró el tecnico");
+    return num;
+}
+void resetearContadorTecnico(void *arg){
+        
+    for (int i = 0; i<2; i++) {
+        if (listaTecnicos[i].id == (char *)arg) {
+            listaTecnicos[i].count = 0;
+            return;
+        }
+    }
+    printf("Error, no se reseteó el contador del tecnico");
+}
+void sumarContadorTecnico(void *arg){
+    for (int i = 0; i<2; i++) {
+        if (listaTecnicos[i].id == (char *)arg) {
+            listaTecnicos[i].count++;
+            return;
+        }
+    }
+    printf("Error al sumar");
+    
 }
 void compactarListaClientes(int pos){ 
     //Metodo que va a compactar la lista de clientes cuando un cliente se marche, ya sea por haber sido atendido o porque abandona la cola por otros motivos
-    pthread_mutex_lock(&semaforoColaClientes);
+    
     int i=0;
     for(i=pos; i<contadorPeticiones-1; i++){
         //Para compactar, se mueven elementos de las posiciones siguientes a la pasada como parámetro una posicion a la izquierda
         listaClientes[i] = listaClientes[i+1];
     }
     contadorPeticiones--;
-    pthread_mutex_unlock(&semaforoColaClientes);
+   
 
 }
 void escribirEnLog(char *id, char *mensaje){
