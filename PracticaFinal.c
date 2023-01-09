@@ -46,6 +46,7 @@ struct ResponsableReps{
 pthread_mutex_t semaforoFichero;
 pthread_mutex_t semaforoColaClientes;
 pthread_mutex_t semaforoSolicitudes;
+pthread_mutex_t semaforoSolicitudesDomiciliarias;
 
 
 //Variables globales
@@ -139,6 +140,10 @@ int main(int argc, char *argv[]){
         exit (-1);
     }
     if (pthread_mutex_init(&semaforoSolicitudes, NULL) != 0) {
+        perror("Error en la creacion del semaforo de solicitudes");
+        exit (-1);
+    }
+    if (pthread_mutex_init(&semaforoSolicitudesDomiciliarias, NULL) != 0) {
         perror("Error en la creacion del semaforo de solicitudes");
         exit (-1);
     }
@@ -292,12 +297,16 @@ void *accionesCliente(void *arg) {
         }
         //20% de que se vayan por cansarse de esperar(cada 8 segundos)
         if(calculaAleatorio(0, 100)<20){
+            pthread_mutex_lock(semaforoSolicitudes);
             compactarListaClientes((intptr_t)arg);
+            pthread_mutex_unlock(semaforoSolicitudes);
             pthread_exit(NULL);
         }
         //5% que pierde la conexion
         if(calculaAleatorio(0, 100)<5){
+            pthread_mutex_lock(semaforoSolicitudes);
             compactarListaClientes((intptr_t)arg);
+            pthread_mutex_unlock(semaforoSolicitudes);
             pthread_exit(NULL);
         }
     }
@@ -307,7 +316,30 @@ void *accionesCliente(void *arg) {
         sleep(1);
     }
 
-    
+    //en caso de ser un cliente de app, abandona la lista, si es de red podria solicitar atencion domiciliaria
+    if(listaClientes[(intptr_t)arg].tipo=='a'){
+        pthread_mutex_lock(semaforoSolicitudes);
+        compactarListaClientes((intptr_t)arg);
+        pthread_mutex_unlock(semaforoSolicitudes);
+        pthread_exit(NULL);
+    }else{
+        if(calculaAleatorio(0,100)<30){ //caso de pedir atencion domiciliaria
+            
+        pthread_mutex_lock(semaforoSolicitudesDomiciliarias);
+        if(nSolicitudesDomiciliarias<4){
+            nSolicitudesDomiciliarias++;
+        }
+        pthread_mutex_unlock(semaforoSolicitudesDomiciliarias);
+
+        
+
+        }else{
+            pthread_mutex_lock(semaforoSolicitudes);
+            compactarListaClientes((intptr_t)arg);
+            pthread_mutex_unlock(semaforoSolicitudes);
+            pthread_exit(NULL);
+        }
+    }
 
 
 }
