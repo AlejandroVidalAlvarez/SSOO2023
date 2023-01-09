@@ -157,14 +157,14 @@ int main(int argc, char *argv[]){
         strcpy(listaTecnicos[i].id, "tecnico_"+(i+1));
         listaTecnicos[i].id=i;
         listaTecnicos[i].count=0;
-        pthread_create(&listaTecnicos[i].hiloTecnico, NULL, accionesTecnico, ("Tecnico %d creado",(i+1)));
+        pthread_create(&listaTecnicos[i].hiloTecnico, NULL, accionesTecnico, ("Tecnico creado"));
     }
 
     //Creacion de los hilos de los responsables
     for(int i=0; i<numResponsables; i++){
         strcpy(listaResponsables[i].id, "resprep_"+(i+1));
         listaResponsables[i].count=0;
-        pthread_create(&listaResponsables[i].hiloResponsable, NULL, accionesresponsablesReparacion, ("Respondable %d creado",(i+1)));
+        pthread_create(&listaResponsables[i].hiloResponsable, NULL, accionesresponsablesReparacion, ("Respondable creado"));
     }
     
     //Creacion del hilo encargado
@@ -233,14 +233,14 @@ void manejadora_fin(int signal){
     printf("La llegada de solicitudes ha sido desactivada\n");
     escribirEnLog("FINAL","La llegada de solicitudes ha sido desactivada");
     while(1==1){
-        pthread_mutex_lock(&semaforoSolicitudes);
+        pthread_mutex_lock(&semaforoColaClientes);
         if(contadorPeticiones==0){
-            pthread_mutex_unlock(&semaforoSolicitudes);
+            pthread_mutex_unlock(&semaforoColaClientes);
             printf("Saliendo del programa\n");
             escribirEnLog("TERMINADO","Saliendo del programa");
             exit(0);
         }else{
-            pthread_mutex_unlock(&semaforoSolicitudes);
+            pthread_mutex_unlock(&semaforoColaClientes);
             sleep(1);
         }
     }
@@ -249,14 +249,15 @@ void manejadora_fin(int signal){
 
 //[][][][]  Metodos Tareas Principales  [][][][]
 void *accionesCliente(void *arg) {
-    
+    int posicionArgumento = (intptr_t)arg;
     //mientras no esta siendo atendido, calculamos su comportamiento
     while(listaClientes[(intptr_t)arg].atendido==0){
         int num=0;
         for(num=0; num<4; num++){
             //10% de que se vayan por encontrar muy dificil la aplicacion(cada 2 segundos)
             if(calculaAleatorio(0, 100)< 10){
-            compactarListaClientes((intptr_t)arg);
+
+            compactarListaClientes(posicionArgumento);
             //no hace  falta decrementar el contador de peticiones porque lo decrementa el metodo de compactar
             pthread_exit(NULL);
             }
@@ -265,14 +266,14 @@ void *accionesCliente(void *arg) {
         //20% de que se vayan por cansarse de esperar(cada 8 segundos)
         if(calculaAleatorio(0, 100)<20){
             pthread_mutex_lock(&semaforoSolicitudes);
-            compactarListaClientes((intptr_t)arg);
+            compactarListaClientes(posicionArgumento);
             pthread_mutex_unlock(&semaforoSolicitudes);
             pthread_exit(NULL);
         }
         //5% que pierde la conexion
         if(calculaAleatorio(0, 100)<5){
             pthread_mutex_lock(&semaforoSolicitudes);
-            compactarListaClientes((intptr_t)arg);
+            compactarListaClientes(posicionArgumento);
             pthread_mutex_unlock(&semaforoSolicitudes);
             pthread_exit(NULL);
         }
