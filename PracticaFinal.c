@@ -447,8 +447,13 @@ void *accionesTecnico(void *arg) {
         }
         pthread_mutex_lock(&semaforoColaClientes);
         if (contadorClientesApp > 0) {
+            
             int i = buscarClientePrioritario('a');
-            if(!(i>=0)){
+            if(!((i>=0)&&(i<20))){
+                if(i==-1){
+                    pthread_mutex_unlock(&semaforoColaClientes);
+                    continue;
+                }
                 printf("error al buscar el cliente prioritario, realmente hay clientes?i-->%d\n",i);
                 pthread_mutex_unlock(&semaforoColaClientes);
                 sleep(3);//TODO aqui nunca deberia entrar por tanto eliminar antes de entregar 
@@ -457,7 +462,7 @@ void *accionesTecnico(void *arg) {
             char idCliente[20];
 
             char *text = malloc(sizeof(char) * 1024);
-            sprintf(text,"Comienza la atencion al cliente llamado %s",listaClientes[i].id);
+            sprintf(text,"Comienza la atencion al cliente llamado %s en la posicion %d",listaClientes[i].id,i);
             strcpy(idCliente, listaClientes[i].id);
             pthread_mutex_unlock(&semaforoColaClientes);
             escribirEnLog((char *)arg, text);
@@ -480,7 +485,7 @@ void *accionesTecnico(void *arg) {
                 dormir = calculaAleatorio(1, 2);
             }
 
-            sleep(dormir);
+            
             
             escribirEnLog((char *)arg,texto);
             
@@ -490,6 +495,7 @@ void *accionesTecnico(void *arg) {
             accionFinalTecnico(idCliente);
             sumarContadorTecnico(arg);
             pthread_mutex_unlock(&semaforoColaClientes);
+            sleep(dormir);
 
         } else {
             pthread_mutex_unlock(&semaforoColaClientes);
@@ -531,9 +537,9 @@ void ponerComoAtendido(char idBuscado[20]){
 
 int buscarPrioridad(char tipo) {
 
-    int maximo = 0;
+    int maximo = -1;
     for (int i = 0; i<contadorPeticiones; i++) {
-        if (listaClientes[i].tipo == tipo && maximo < listaClientes[i].prioridad) {
+        if (listaClientes[i].atendido==0 &&listaClientes[i].tipo == tipo && maximo < listaClientes[i].prioridad&&listaClientes[i].prioridad!=0) {
             maximo = listaClientes[i].prioridad;
         }
     }
@@ -621,15 +627,18 @@ int buscarClientePrioritario(char tipo) {
             return i;
         } 
     }
+    return prioridadMaxima;
 }
 
 void accionFinalTecnico(char idCliente[20]) {
     for (int i = 0; i<contadorPeticiones; i++) {
-        if (strcmp(listaClientes[i].id,idCliente)&&listaClientes[i].atendido == 1) {
+        if (strcmp(listaClientes[i].id,idCliente)==0&&listaClientes[i].atendido == 1) {
             listaClientes[i].atendido = 2;
-            printf("Cliente encontrado, el contador de la app es: %d, y el contador total es: %d\n", contadorClientesApp, contadorPeticiones);
+            printf("Cliente %c encontrado, el contador de la app es: %d, y el contador total es: %d\n",*idCliente, contadorClientesApp, contadorPeticiones);
             return;
         }
     }
-    printf("Cliente NO encontrado, el contador de la app es: %d, y el contador total es: %d\n", contadorClientesApp, contadorPeticiones);
+    
+    printf("%s,%s",idCliente,listaClientes[0].id);
+    printf("Cliente %c NO encontrado, el contador de la app es: %d, y el contador total es: %d\n",*idCliente, contadorClientesApp, contadorPeticiones);
 }

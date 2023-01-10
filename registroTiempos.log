@@ -1,24 +1,48 @@
-[10/ 01/ 23 13: 28: 40] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
-[10/ 01/ 23 13: 28: 40] cliapp_1: El cliente ha abandonado el sistema por cansarse de esperar
-[10/ 01/ 23 13: 28: 44] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
-[10/ 01/ 23 13: 28: 44] cliapp_1: El cliente ha abandonado el sistema por cansarse de esperar
-[10/ 01/ 23 13: 28: 44] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
-[10/ 01/ 23 13: 28: 44] cliapp_1: El cliente ha abandonado el sistema por cansarse de esperar
-[10/ 01/ 23 13: 28: 47] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
-[10/ 01/ 23 13: 28: 48] tecnico_1: Comienza la atencion al cliente llamado cliapp_1
-[10/ 01/ 23 13: 28: 48] tecnico_2: Comienza la atencion al cliente llamado 
-[10/ 01/ 23 13: 28: 48] cliapp_2: El cliente de tipo a ha entrado al sistema y espera ser atendido
-[10/ 01/ 23 13: 28: 49] tecnico_1: Finaliza la atencion al cliente, todo en regla
-[10/ 01/ 23 13: 28: 49] tecnico_1: Comienza la atencion al cliente llamado 
-[10/ 01/ 23 13: 28: 49] tecnico_2: Finaliza la atencion al cliente, todo en regla
-[10/ 01/ 23 13: 28: 49] tecnico_2: Comienza la atencion al cliente llamado 
-[10/ 01/ 23 13: 28: 49] cliapp_2: El cliente ha terminado de ser atendido y abandona el sistema
-[10/ 01/ 23 13: 28: 50] tecnico_1: Finaliza la atencion al cliente, compañía equivocada
-[10/ 01/ 23 13: 28: 50] tecnico_1: Comienza la atencion al cliente llamado 
-[10/ 01/ 23 13: 28: 50] tecnico_2: Finaliza la atencion al cliente, compañía equivocada
-[10/ 01/ 23 13: 28: 50] tecnico_2: Comienza la atencion al cliente llamado 
-[10/ 01/ 23 13: 28: 50] cliapp_1: El cliente ha terminado de ser atendido y abandona el sistema
-[10/ 01/ 23 13: 28: 53] tecnico_1: Finaliza la atencion al cliente, todo en regla
-[10/ 01/ 23 13: 28: 53] tecnico_2: Finaliza la atencion al cliente, todo en regla
-[10/ 01/ 23 13: 29: 02] FINAL: La llegada de solicitudes ha sido desactivada
-[10/ 01/ 23 13: 29: 02] TERMINADO: Saliendo del programa
+[10/ 01/ 23 15: 34: 50] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 34: 50] cliapp_1: El cliente ha abandonado el sistema por cansarse de esperar
+[10/ 01/ 23 15: 34: 54] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 34: 56] cliapp_1: El cliente ha abandonado el sistema por problemas de conexión
+[10/ 01/ 23 15: 35: 01] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 35: 03] tecnico_2: Comienza la atencion al cliente llamado cliapp_1 en la posicion 0
+[10/ 01/ 23 15: 35: 03] tecnico_2: Finaliza la atencion al cliente, cliente mal identificado
+[10/ 01/ 23 15: 35: 03] cliapp_1: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 15: 35: 11] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 35: 11] cliapp_1: El cliente ha abandonado el sistema por cansarse de esperar
+[10/ 01/ 23 15: 35: 15] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 35: 15] cliapp_1: El cliente ha abandonado el sistema por dificultad en la app
+[10/ 01/ 23 15: 35: 17] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 35: 18] tecnico_1: Comienza la atencion al cliente llamado cliapp_1 en la posicion 0
+[10/ 01/ 23 15: 35: 18] tecnico_1: Finaliza la atencion al cliente, todo en regla
+[10/ 01/ 23 15: 35: 19] cliapp_1: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 15: 35: 26] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 35: 26] cliapp_2: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 35: 26] tecnico_1: Comienza la atencion al cliente llamado cliapp_1 en la posicion 0
+[10/ 01/ 23 15: 35: 26] tecnico_1: Finaliza la atencion al cliente, todo en regla
+[10/ 01/ 23 15: 35: 27] cliapp_1: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 15: 35: 29] tecnico_2: Comienza la atencion al cliente llamado cliapp_2 en la posicion 0
+[10/ 01/ 23 15: 35: 29] tecnico_2: Finaliza la atencion al cliente, todo en regla
+[10/ 01/ 23 15: 35: 30] : El cliente ha abandonado el sistema por problemas de conexión
+[10/ 01/ 23 15: 35: 46] tecnico_1: Comienza la atencion al cliente llamado cliapp_2 en la posicion 0
+[10/ 01/ 23 15: 35: 46] tecnico_1: Finaliza la atencion al cliente, compañía equivocada
+[10/ 01/ 23 15: 35: 46] cliapp_2: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 35: 46] cliapp_2: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 15: 35: 46] tecnico_2: Comienza la atencion al cliente llamado cliapp_2 en la posicion 0
+[10/ 01/ 23 15: 35: 46] tecnico_2: Finaliza la atencion al cliente, compañía equivocada
+[10/ 01/ 23 15: 35: 46] cliapp_2: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 35: 46] cliapp_2: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 15: 36: 12] tecnico_1: Comienza la atencion al cliente llamado cliapp_2 en la posicion 0
+[10/ 01/ 23 15: 36: 12] tecnico_1: Finaliza la atencion al cliente, compañía equivocada
+[10/ 01/ 23 15: 36: 12] cliapp_2: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 36: 12] cliapp_2: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 15: 36: 12] cliapp_2: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 36: 12] tecnico_2: Comienza la atencion al cliente llamado cliapp_2 en la posicion 0
+[10/ 01/ 23 15: 36: 12] tecnico_2: Finaliza la atencion al cliente, compañía equivocada
+[10/ 01/ 23 15: 36: 12] cliapp_3: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 15: 36: 13] tecnico_1: Comienza la atencion al cliente llamado cliapp_3 en la posicion 1
+[10/ 01/ 23 15: 36: 13] tecnico_1: Finaliza la atencion al cliente, todo en regla
+[10/ 01/ 23 15: 36: 13] cliapp_3: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 15: 36: 14] cliapp_2: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 15: 36: 15] tecnico_1: Comienza el descanso
+[10/ 01/ 23 15: 36: 20] tecnico_1: Finaliza el descanso
+[10/ 01/ 23 15: 37: 15] FINAL: La llegada de solicitudes ha sido desactivada
+[10/ 01/ 23 15: 37: 15] TERMINADO: Saliendo del programa
