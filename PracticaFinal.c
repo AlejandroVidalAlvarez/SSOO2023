@@ -51,6 +51,11 @@ pthread_mutex_t semaforoFichero;
 pthread_mutex_t semaforoColaClientes;
 pthread_mutex_t semaforoSolicitudesDomiciliarias;
 int ignorarSolicitudes;
+// Condicion para llamar al tecnico domiciliario cuando hay 4 solicitudes
+pthread_cond_t condicionTecnicoDomiciliario = PTHREAD_COND_INITIALIZER;
+// Variable condicion para que no entren mas solicitudes domiciliarias mientras trabaja el tecnico domiciliario
+int ignorarSolicitudesDomiciliarias;
+
 
 
 //[][][][]  Variables globales  [][][][]
@@ -87,6 +92,10 @@ void sumarContadorTecnico(void *arg);
 void resetearContadorTecnico(void *arg);
 int buscarClientePrioritario(char tipo);
 void accionFinalTecnico(char idCliente[20]);
+int comprobarDescansoResponsable(void *arg);
+void sumarContadorResponsable(void *arg);
+void resetearContadorResponsable(void *arg);
+void accionFinalResponsable(char idCliente[20]);
 
 int main(int argc, char *argv[]){
 
@@ -116,6 +125,7 @@ int main(int argc, char *argv[]){
     contadorClientesRed = 0;
     nSolicitudesDomiciliarias = 0;
     ignorarSolicitudes = 0;
+    ignorarSolicitudesDomiciliarias = 0;
     
     //Definicion de los punteros de las listas de clientes, tecnicos y responsables
     listaClientes =(struct Clientes*) malloc(sizeof(struct Clientes) * peticionesMax);
@@ -371,6 +381,10 @@ void *accionesCliente(void *arg) {
             pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
             if(nSolicitudesDomiciliarias<4){
                 nSolicitudesDomiciliarias++;
+                printf("Cliente esperando ser atendido en casa\n");
+                if (nSolicitudesDomiciliarias == 4) {
+                    pthread_cond_broadcast(&condicionTecnicoDomiciliario);
+                }
                 pthread_mutex_lock(&semaforoColaClientes);
                 texto = malloc(sizeof(char) * 1024);
                 sprintf(texto,"El cliente espera ha ser atendido en su domicilio");
@@ -385,6 +399,7 @@ void *accionesCliente(void *arg) {
                 pthread_mutex_unlock(&semaforoColaClientes);
                 pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
             }else{
+                pthread_cond_wait(&condicionTecnicoDomiciliario, &semaforoSolicitudesDomiciliarias);
                 pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
                 sleep(3);
             }
@@ -510,10 +525,108 @@ void *accionesEncargado(void *arg) {
 }
 void *accionesTecnicoDomiciliario(void *arg) {
     printf("%s\n", (char *)arg);
+    while (1==1) {
+        pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
+        while (nSolicitudesDomiciliarias < 4) {
+            pthread_cond_wait(&condicionTecnicoDomiciliario, &semaforoSolicitudesDomiciliarias);
+            printf("El numero de solicitudes domiciliarias es de %d\n", nSolicitudesDomiciliarias);
+        }
+        printf("Comienza la atencion domiciliaria\n");
+        escribirEnLog("Tecnico domiciliario", "Comienza la atencion domiciliaria");
+        pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
+        ignorarSolicitudesDomiciliarias = 1;
+        for (int i = 0; i<nSolicitudesDomiciliarias; i++) {
+            pthread_mutex_lock(&semaforoColaClientes);
+            for (int j = 0; j<contadorPeticiones; i++) {
+                if (listaClientes[j].solicitud == 1) {
+                    char* texto = malloc(sizeof(char) + 1024);
+                    sprintf(texto, "Atendido el cliente %d", i);
+                    listaClientes[i].solicitud = 0;
+                    pthread_mutex_lock(&semaforoColaClientes);
+                    sleep(1);
+                    escribirEnLog("Tecnico domiciliario", texto);
+                }
+            }
+        }
+        nSolicitudesDomiciliarias = 0;
+        printf("Acabo la atencion domiciliaria\n");
+        escribirEnLog("Tecnico domiciliario", "Finaliza la atencion domiciliaria");
+    }
     pthread_exit(NULL);
 }
 void *accionesresponsablesReparacion(void *arg) {
     printf("Creado %s\n", (char *)arg);
+    while (1==1) {
+        if(comprobarDescansoResponsable(arg)>=6){
+            
+            escribirEnLog((char *)arg, "Comienza el descanso");
+            
+            resetearContadorResponsable(arg);
+
+            sleep(5);
+
+            
+            escribirEnLog((char *)arg, "Finaliza el descanso");
+            
+            
+        }
+        pthread_mutex_lock(&semaforoColaClientes);
+        if (contadorClientesRed > 0) {
+            
+            int i = buscarClientePrioritario('r');
+            if(!((i>=0)&&(i<20))){
+                if(i==-1){
+                    pthread_mutex_unlock(&semaforoColaClientes);
+                    continue;
+                }
+                printf("error al buscar el cliente prioritario, realmente hay clientes?i-->%d\n",i);
+                pthread_mutex_unlock(&semaforoColaClientes);
+                sleep(3);//TODO aqui nunca deberia entrar por tanto eliminar antes de entregar 
+                continue;//siguiente iteracion del while
+            }
+            char idCliente[20];
+
+            char *text = malloc(sizeof(char) * 1024);
+            sprintf(text,"Comienza la atencion al cliente llamado %s en la posicion %d",listaClientes[i].id,i);
+            strcpy(idCliente, listaClientes[i].id);
+            pthread_mutex_unlock(&semaforoColaClientes);
+            escribirEnLog((char *)arg, text);
+            free(text);
+
+            int probabilidad = calculaAleatorio(1, 100);
+            int dormir, tipoAtencion;
+            char *texto = malloc(sizeof(char) * 1024);
+            if (probabilidad <= 80) {
+                sprintf(texto,"Finaliza la atencion al cliente, todo en regla");
+                tipoAtencion = 0;
+                dormir = calculaAleatorio(1, 4);
+            } else if (probabilidad <= 90) {
+                sprintf(texto,"Finaliza la atencion al cliente, cliente mal identificado");
+                tipoAtencion = 1;
+                dormir = calculaAleatorio(2, 6);
+            } else {
+                sprintf(texto,"Finaliza la atencion al cliente, compañía equivocada");
+                tipoAtencion = 2;
+                dormir = calculaAleatorio(1, 2);
+            }
+
+            
+            
+            escribirEnLog((char *)arg,texto);
+            
+            free(texto);
+
+            pthread_mutex_lock(&semaforoColaClientes);
+            accionFinalResponsable(idCliente);
+            sumarContadorResponsable(arg);
+            pthread_mutex_unlock(&semaforoColaClientes);
+            sleep(dormir);
+
+        } else {
+            pthread_mutex_unlock(&semaforoColaClientes);
+            sleep(3);//TODO es un sleep1, cambiar antes de entregar
+        }
+    }
     pthread_exit(NULL);
 }
 
@@ -641,4 +754,48 @@ void accionFinalTecnico(char idCliente[20]) {
     
     printf("%s,%s",idCliente,listaClientes[0].id);
     printf("Cliente %c NO encontrado, el contador de la app es: %d, y el contador total es: %d\n",*idCliente, contadorClientesApp, contadorPeticiones);
+}
+
+int comprobarDescansoResponsable(void *arg) {
+
+    int num = 0;
+    for (int i = 0; i<2; i++) {
+        if (listaResponsables[i].id == (char *)arg) {
+            return listaResponsables[i].count;
+        }
+    }
+    printf("Error, no se encontró el responsable\n");
+    return num;
+}
+void resetearContadorResponsable(void *arg){
+        
+    for (int i = 0; i<2; i++) {
+        if (listaResponsables[i].id == (char *)arg) {
+            listaResponsables[i].count = 0;
+            return;
+        }
+    }
+    printf("Error, no se reseteó el contador del responsable\n");
+}
+void sumarContadorResponsable(void *arg){
+    for (int i = 0; i<2; i++) {
+        if (strcmp(listaResponsables[i].id, (char *)arg)) {
+            listaResponsables[i].count++;
+            return;
+        }
+    }
+    printf("Error al sumar\n");
+    
+}
+void accionFinalResponsable(char idCliente[20]) {
+    for (int i = 0; i<contadorPeticiones; i++) {
+        if (strcmp(listaClientes[i].id,idCliente)==0&&listaClientes[i].atendido == 1) {
+            listaClientes[i].atendido = 2;
+            printf("Cliente %c encontrado, el contador de red es: %d, y el contador total es: %d\n",*idCliente, contadorClientesRed, contadorPeticiones);
+            return;
+        }
+    }
+    
+    printf("%s,%s",idCliente,listaClientes[0].id);
+    printf("Cliente %c NO encontrado, el contador de red es: %d, y el contador total es: %d\n",*idCliente, contadorClientesRed, contadorPeticiones);
 }
