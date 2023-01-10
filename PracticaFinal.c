@@ -377,6 +377,11 @@ void *accionesCliente(void *arg) {
            int terminar = 0; //
            while(terminar==0){
             pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
+            while (ignorarSolicitudesDomiciliarias == 1) {
+                printf("Esperando ayuda\n");
+                pthread_cond_wait(&condicionTecnicoDomiciliario, &semaforoSolicitudesDomiciliarias);
+                sleep(5);
+            }
             if(nSolicitudesDomiciliarias<4){
                 nSolicitudesDomiciliarias++;
                 printf("Cliente esperando ser atendido en casa\n");
@@ -401,7 +406,7 @@ void *accionesCliente(void *arg) {
                 pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
                 sleep(3);
             }
-           } 
+           }
             terminar = 0;
             while(terminar==0){ //Espera a que el tecnico termine la visita a domicilio
                 pthread_mutex_lock(&semaforoColaClientes);
@@ -532,26 +537,29 @@ void *accionesTecnicoDomiciliario(void *arg) {
             printf("El numero de solicitudes domiciliarias es de %d\n", nSolicitudesDomiciliarias);
         }
         printf("Comienza la atencion domiciliaria\n");
+        pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
         escribirEnLog("Tecnico domiciliario", "Comienza la atencion domiciliaria");
         ignorarSolicitudesDomiciliarias = 1;
         int dormir = 0;
         pthread_mutex_lock(&semaforoColaClientes);
         for (int i = 0; i<nSolicitudesDomiciliarias; i++) {
-            printf("Yendo a atender al cliente %d a su casa\n", i);
             for (int j = 0; j<contadorPeticiones; j++) {
                 if (listaClientes[j].solicitud == 1) {
                     char* texto = malloc(sizeof(char) + 1024);
                     sprintf(texto, "Atendido el cliente %d", i);
                     listaClientes[i].solicitud = 0;
                     pthread_mutex_unlock(&semaforoColaClientes);
-                    dormir++;
+                    sleep(1);
                     escribirEnLog("Tecnico domiciliario", texto);
                     break;
                 }
             }
         }
+        ignorarSolicitudesDomiciliarias = 0;
         pthread_mutex_unlock(&semaforoColaClientes);
         nSolicitudesDomiciliarias = 0;
+        pthread_cond_broadcast(&condicionTecnicoDomiciliario);
+        pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
         printf("Acabo la atencion domiciliaria\n");
         escribirEnLog("Tecnico domiciliario", "Finaliza la atencion domiciliaria");
     }
