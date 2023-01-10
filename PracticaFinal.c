@@ -367,7 +367,6 @@ void *accionesTecnico(void *arg) {
         }
         pthread_mutex_lock(&semaforoColaClientes);
         if (contadorClientesApp > 0) {
-            printf("El contador de app es %d, y el total es %d\n", contadorClientesApp, contadorPeticiones);
             int i = buscarClientePrioritario('a');
             char idCliente[20];
             strcpy(idCliente, listaClientes[i].id);
