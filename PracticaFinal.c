@@ -86,7 +86,7 @@ int comprobarDescansoTecnico(void *arg);
 void sumarContadorTecnico(void *arg);
 void resetearContadorTecnico(void *arg);
 int buscarClientePrioritario(char tipo);
-void accionFinalTecnico(int tipoAtencion);
+void accionFinalTecnico(char idCliente[20]);
 
 int main(int argc, char *argv[]){
 
@@ -263,10 +263,9 @@ void *accionesCliente(void *arg) {
 
     char *texto;
     texto = malloc(sizeof(char) * 1024);
-    sprintf(texto,"El cliente de tipo %c ha entrado al sistema y espera ser atendido\n",listaClientes[posicionArgumento].tipo);
-    pthread_mutex_lock(&semaforoFichero);
+    sprintf(texto,"El cliente de tipo %c ha entrado al sistema y espera ser atendido",listaClientes[posicionArgumento].tipo);
     escribirEnLog(listaClientes[posicionArgumento].id,texto);
-    pthread_mutex_unlock(&semaforoFichero);
+   
     free(texto);
 
     int contador;
@@ -283,10 +282,10 @@ void *accionesCliente(void *arg) {
             }
             char *texto;
             texto = malloc(sizeof(char) * 1024);
-            sprintf(texto,"El cliente ha abandonado el sistema por dificultad en la app\n");
-            pthread_mutex_lock(&semaforoFichero);
+            sprintf(texto,"El cliente ha abandonado el sistema por dificultad en la app");
+            
             escribirEnLog(listaClientes[posicionArgumento].id,texto);
-            pthread_mutex_unlock(&semaforoFichero);
+            
             free(texto);
 
             compactarListaClientes(posicionArgumento);
@@ -303,10 +302,10 @@ void *accionesCliente(void *arg) {
                 contadorClientesRed--;
             }
             texto = malloc(sizeof(char) * 1024);
-            sprintf(texto,"El cliente ha abandonado el sistema por cansarse de esperar\n");
-            pthread_mutex_lock(&semaforoFichero);
+            sprintf(texto,"El cliente ha abandonado el sistema por cansarse de esperar");
+            
             escribirEnLog(listaClientes[posicionArgumento].id,texto);
-            pthread_mutex_unlock(&semaforoFichero);
+            
             free(texto);
 
             compactarListaClientes(posicionArgumento);
@@ -324,10 +323,10 @@ void *accionesCliente(void *arg) {
                 contadorClientesRed--;
             }
             texto = malloc(sizeof(char) * 1024);
-            sprintf(texto,"El cliente ha abandonado el sistema por problemas de conexión\n");
-            pthread_mutex_lock(&semaforoFichero);
+            sprintf(texto,"El cliente ha abandonado el sistema por problemas de conexión");
+            
             escribirEnLog(listaClientes[posicionArgumento].id,texto);
-            pthread_mutex_unlock(&semaforoFichero);
+            
             free(texto);
 
             compactarListaClientes(posicionArgumento);
@@ -355,10 +354,10 @@ void *accionesCliente(void *arg) {
         pthread_mutex_lock(&semaforoColaClientes);
 
         texto = malloc(sizeof(char) * 1024);
-        sprintf(texto,"El cliente ha terminado de ser atendido y abandona el sistema\n");
-        pthread_mutex_lock(&semaforoFichero);
+        sprintf(texto,"El cliente ha terminado de ser atendido y abandona el sistema");
+        
         escribirEnLog(listaClientes[posicionArgumento].id,texto);
-        pthread_mutex_unlock(&semaforoFichero);
+        
         free(texto);
 
         compactarListaClientes((intptr_t)arg);
@@ -374,10 +373,10 @@ void *accionesCliente(void *arg) {
                 nSolicitudesDomiciliarias++;
                 pthread_mutex_lock(&semaforoColaClientes);
                 texto = malloc(sizeof(char) * 1024);
-                sprintf(texto,"El cliente espera ha ser atendido en su domicilio\n");
-                pthread_mutex_lock(&semaforoFichero);
+                sprintf(texto,"El cliente espera ha ser atendido en su domicilio");
+                
                 escribirEnLog(listaClientes[posicionArgumento].id,texto);
-                pthread_mutex_unlock(&semaforoFichero);
+                
                 free(texto);
 
                 
@@ -402,10 +401,10 @@ void *accionesCliente(void *arg) {
             //el cliente comunica en el log su salida de la app tras la visita
                 pthread_mutex_lock(&semaforoColaClientes);
                 texto = malloc(sizeof(char) * 1024);
-                sprintf(texto,"El cliente abandona el sistema tras terminar la visita a su domicilio\n");
-                pthread_mutex_lock(&semaforoFichero);
+                sprintf(texto,"El cliente abandona el sistema tras terminar la visita a su domicilio");
+                
                 escribirEnLog(listaClientes[posicionArgumento].id,texto);
-                pthread_mutex_unlock(&semaforoFichero);
+                
                 free(texto);
                 pthread_mutex_unlock(&semaforoColaClientes);
         
@@ -416,10 +415,10 @@ void *accionesCliente(void *arg) {
             contadorClientesRed--;
 
             texto = malloc(sizeof(char) * 1024);
-            sprintf(texto,"El cliente abandona el sistema tras ser atendido y no solicitar visita a domicilio\n");
-            pthread_mutex_lock(&semaforoFichero);
+            sprintf(texto,"El cliente abandona el sistema tras ser atendido y no solicitar visita a domicilio");
+            
             escribirEnLog(listaClientes[posicionArgumento].id,texto);
-            pthread_mutex_unlock(&semaforoFichero);
+            
             free(texto);
 
             pthread_mutex_unlock(&semaforoColaClientes);
@@ -436,9 +435,14 @@ void *accionesTecnico(void *arg) {
         if(comprobarDescansoTecnico(arg)>=5){
             
             escribirEnLog((char *)arg, "Comienza el descanso");
+            
             resetearContadorTecnico(arg);
+
             sleep(5);
+
+            
             escribirEnLog((char *)arg, "Finaliza el descanso");
+            
             
         }
         pthread_mutex_lock(&semaforoColaClientes);
@@ -449,23 +453,36 @@ void *accionesTecnico(void *arg) {
             pthread_mutex_unlock(&semaforoColaClientes);
             int probabilidad = calculaAleatorio(1, 100);
             int dormir, tipoAtencion;
+            char *texto = malloc(sizeof(char) * 1024);
             if (probabilidad <= 80) {
+                sprintf(texto,"Finaliza la atencion al cliente, todo en regla");
                 tipoAtencion = 0;
                 dormir = calculaAleatorio(1, 4);
             } else if (probabilidad <= 90) {
+                sprintf(texto,"Finaliza la atencion al cliente, cliente mal identificado");
                 tipoAtencion = 1;
                 dormir = calculaAleatorio(2, 6);
             } else {
+                sprintf(texto,"Finaliza la atencion al cliente, compañía equivocada");
                 tipoAtencion = 2;
                 dormir = calculaAleatorio(1, 2);
             }
+            
             escribirEnLog((char *)arg, "Comienza la atencion al cliente");
+            
+            
             sleep(dormir);
-            escribirEnLog((char *)arg, "Finaliza la atencion al cliente");
+            
+            
+            escribirEnLog((char *)arg,texto);
+            
+            free(texto);
+
             pthread_mutex_lock(&semaforoColaClientes);
-            accionFinalTecnico(tipoAtencion);
+            accionFinalTecnico(idCliente);
             sumarContadorTecnico(arg);
             pthread_mutex_unlock(&semaforoColaClientes);
+
         } else {
             pthread_mutex_unlock(&semaforoColaClientes);
             sleep(1);
@@ -582,22 +599,11 @@ int buscarClientePrioritario(char tipo) {
     }
 }
 
-void accionFinalTecnico(int tipoAtencion) {
+void accionFinalTecnico(char idCliente[20]) {
     for (int i = 0; i<contadorPeticiones; i++) {
-        if (listaClientes[i].atendido == 1) {
-            //listaClientes[i].tipoDeAtencion = tipoAtencion;
+        if (listaClientes[i].id == idCliente) {
             listaClientes[i].atendido = 2;
         } else {
         }
-        /* puede ser util para arreglarlo
-        int aux = calculaAleatorio(0,100);
-        if(aux<80){
-            listaClientes[contadorPeticiones].tipoDeAtencion=0;
-        }else if(80<aux<90){
-            listaClientes[contadorPeticiones].tipoDeAtencion=1;
-        }else{
-            listaClientes[contadorPeticiones].tipoDeAtencion=2;
-        }
-        */
     }
 }
