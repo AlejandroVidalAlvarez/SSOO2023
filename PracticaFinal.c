@@ -24,7 +24,7 @@ struct Clientes{
     char tipo;
     //Su valor va desde 1 hasta 10(ambos incluidos), siendo 1 la prioridad mas baja y 10 la más alta.
     int prioridad;
-    //SOLO CLINETES DE RED 0=todo en regla, 1=mal identificados y 2=compañia equivocada
+    //Su valor es 0=todo en regla, 1=mal identificados y 2=compañia equivocada
     int tipoDeAtencion;
     //Hilo que ejecutan los clientes
     pthread_t hiloCliente;
@@ -84,6 +84,8 @@ void compactarListaClientes(int pos);
 int comprobarDescansoTecnico(void *arg);
 void sumarContadorTecnico(void *arg);
 void resetearContadorTecnico(void *arg);
+int buscarClientePrioritario(char tipo);
+void accionFinalTecnico(int tipoAtencion);
 
 int main(int argc, char *argv[]){
 
@@ -166,7 +168,7 @@ int main(int argc, char *argv[]){
     for(int i=0; i<numResponsables; i++){
         sprintf(listaResponsables[i].id,"resprep_%d",(i+1));
         listaResponsables[i].count=0;
-        pthread_create(&listaResponsables[i].hiloResponsable, NULL, accionesresponsablesReparacion, ("Respondable creado"));
+        pthread_create(&listaResponsables[i].hiloResponsable, NULL, accionesresponsablesReparacion, (void *)(intptr_t)listaResponsables[i].id);
     }
     
     //Creacion del hilo encargado
@@ -200,7 +202,7 @@ void nuevoClienteRed(int signal) {
     }else{
         pthread_mutex_lock(&semaforoColaClientes);
         contadorClientesRed++;
-        strcpy(listaClientes[contadorPeticiones].id, "clired_"+contadorClientesRed);
+        sprintf(listaClientes[contadorPeticiones].id,"clired_%d",contadorClientesRed);
         listaClientes[contadorPeticiones].atendido = 0;
         printf("Atributo atendido asignado\n");
         listaClientes[contadorPeticiones].tipo = 'r';
@@ -230,7 +232,7 @@ void nuevoClienteApp(int signal) {
     }else{
         pthread_mutex_lock(&semaforoColaClientes);
         contadorClientesApp++;
-        strcpy(listaClientes[contadorPeticiones].id, "cliapp_"+contadorClientesApp);
+        sprintf(listaClientes[contadorPeticiones].id,"cliapp_%d",contadorClientesApp);
         listaClientes[contadorPeticiones].atendido = 0;
         listaClientes[contadorPeticiones].tipo = 'a';
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
@@ -251,7 +253,6 @@ void manejadora_fin(int signal){
             escribirEnLog("TERMINADO","Saliendo del programa");
             exit(0);
         }else{
-            printf("Peticiones-->%d",contadorPeticiones);
             pthread_mutex_unlock(&semaforoColaClientes);
             sleep(1);
         }
@@ -271,6 +272,11 @@ void *accionesCliente(void *arg) {
         if(contador%2==0){
            if(aleat <= 10){
             pthread_mutex_lock(&semaforoColaClientes);
+            if(listaClientes[(intptr_t)arg].tipo=='a') {
+                contadorClientesApp--;
+            } else {
+                contadorClientesRed--;
+            }
             compactarListaClientes(posicionArgumento);
             pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);
@@ -279,6 +285,11 @@ void *accionesCliente(void *arg) {
         if(contador%8==0){
            if(aleat > 10 && aleat <= 30){
             pthread_mutex_lock(&semaforoColaClientes);
+            if(listaClientes[(intptr_t)arg].tipo=='a') {
+                contadorClientesApp--;
+            } else {
+                contadorClientesRed--;
+            }
             compactarListaClientes(posicionArgumento);
             pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);
@@ -288,6 +299,11 @@ void *accionesCliente(void *arg) {
            if(aleat > 30){
             if(calculaAleatorio(1,100)>95){
             pthread_mutex_lock(&semaforoColaClientes);
+            if(listaClientes[(intptr_t)arg].tipo=='a') {
+                contadorClientesApp--;
+            } else {
+                contadorClientesRed--;
+            }
             compactarListaClientes(posicionArgumento);
             pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);  
@@ -312,6 +328,7 @@ void *accionesCliente(void *arg) {
     if(listaClientes[(intptr_t)arg].tipo=='a'){
         pthread_mutex_lock(&semaforoColaClientes);
         compactarListaClientes((intptr_t)arg);
+        contadorClientesApp--;
         pthread_mutex_unlock(&semaforoColaClientes);
         pthread_exit(NULL);
     }else{
@@ -328,6 +345,7 @@ void *accionesCliente(void *arg) {
         }else{
             pthread_mutex_lock(&semaforoColaClientes);
             compactarListaClientes((intptr_t)arg);
+            contadorClientesRed--;
             pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);
         }
@@ -341,63 +359,40 @@ void *accionesTecnico(void *arg) {
     while (1==1) {
         if(comprobarDescansoTecnico(arg)>=5){
             
-            printf("Comienza descanso, contador peticiones=%d\n",comprobarDescansoTecnico(arg));
+            escribirEnLog((char *)arg, "Comienza el descanso");
             resetearContadorTecnico(arg);
             sleep(5);
-            printf("Termina descanso, contador peticiones=%d\n",comprobarDescansoTecnico(arg));
+            escribirEnLog((char *)arg, "Finaliza el descanso");
             
         }
         pthread_mutex_lock(&semaforoColaClientes);
-        printf("Bloqueo semaforo");
         if (contadorClientesApp > 0) {
-            printf("Entro al if de contadorClientes\n");
-            int prioridadMaxima = buscarPrioridad('a');
-            
-            for (int i = 0; i<contadorPeticiones; i++) {
-                if (listaClientes[i].atendido==0 && listaClientes[i].prioridad == prioridadMaxima && listaClientes[i].tipo == 'a') {
-                    //printf("")
-                    listaClientes[i].atendido = 1; 
-                    char idDelAtendido[20];
-                    strcpy(idDelAtendido, listaClientes[i].id);
-                    pthread_mutex_unlock(&semaforoColaClientes);
-                    printf("Desbloqueo semaforo antes de los ifs\n");
-                    int probabilidad = calculaAleatorio(1, 100); 
-                    if (probabilidad <= 80) {
-                        listaClientes[i].tipoDeAtencion = 0;
-                        escribirEnLog("Tecnico", "atendiendo a cliente");
-                        sleep(calculaAleatorio(1,4));
-                        escribirEnLog("Tecnico", "fin de atencion al cliente");
-                    } else if (probabilidad <= 90) {
-                        listaClientes[i].tipoDeAtencion = 1;
-                        escribirEnLog("Tecnico", "atendiendo a cliente");
-                        sleep(calculaAleatorio(2,6));
-                        escribirEnLog("Tecnico", "fin de atencion al cliente");
-                    } else {
-                        listaClientes[i].tipoDeAtencion = 2;
-                        escribirEnLog("Tecnico", "atendiendo a cliente");
-                        sleep(calculaAleatorio(1,2));
-                        escribirEnLog("Tecnico", "fin de atencion al cliente");
-                    }
-                    pthread_mutex_lock(&semaforoColaClientes);
-                    printf("Bloqueo semaforo antes de poner como atendido\n");
-                    ponerComoAtendido(idDelAtendido);
-                    pthread_mutex_unlock(&semaforoColaClientes);
-                    printf("Desbloqueo semaforo despues de poner como atendido\n");
-                    sumarContadorTecnico(arg);
-                    //pthread_mutex_unlock(&semaforoColaClientes);
-                    break;
-                }else{
-                    //printf("No he atendido a nadie de la cola\n");
-                    if(i==contadorPeticiones-1){
-                        pthread_mutex_unlock(&semaforoColaClientes);
-                        printf("Desbloqueo semaforo porque termina el for");
-                    }
-                }
+            printf("El contador de app es %d, y el total es %d\n", contadorClientesApp, contadorPeticiones);
+            int i = buscarClientePrioritario('a');
+            char idCliente[20];
+            strcpy(idCliente, listaClientes[i].id);
+            pthread_mutex_unlock(&semaforoColaClientes);
+            int probabilidad = calculaAleatorio(1, 100);
+            int dormir, tipoAtencion;
+            if (probabilidad <= 80) {
+                tipoAtencion = 0;
+                dormir = calculaAleatorio(1, 4);
+            } else if (probabilidad <= 90) {
+                tipoAtencion = 1;
+                dormir = calculaAleatorio(2, 6);
+            } else {
+                tipoAtencion = 2;
+                dormir = calculaAleatorio(1, 2);
             }
-            
+            escribirEnLog((char *)arg, "Comienza la atencion al cliente");
+            sleep(dormir);
+            escribirEnLog((char *)arg, "Finaliza la atencion al cliente");
+            pthread_mutex_lock(&semaforoColaClientes);
+            accionFinalTecnico(tipoAtencion);
+            sumarContadorTecnico(arg);
+            pthread_mutex_unlock(&semaforoColaClientes);
         } else {
             pthread_mutex_unlock(&semaforoColaClientes);
-            printf("Desbloqueo semaforo porque la cola de clientes esta vacia\n");
             sleep(1);
         }
     }
@@ -412,7 +407,7 @@ void *accionesTecnicoDomiciliario(void *arg) {
     pthread_exit(NULL);
 }
 void *accionesresponsablesReparacion(void *arg) {
-    printf("%s\n", (char *)arg);
+    printf("Creado %s\n", (char *)arg);
     pthread_exit(NULL);
 }
 
@@ -470,7 +465,6 @@ void sumarContadorTecnico(void *arg){
     for (int i = 0; i<2; i++) {
         if (listaTecnicos[i].id == (char *)arg) {
             listaTecnicos[i].count++;
-            printf("Llevp %d atendidos\n", listaTecnicos[i].count);
             return;
         }
     }
@@ -479,16 +473,15 @@ void sumarContadorTecnico(void *arg){
 }
 void compactarListaClientes(int pos){ 
     //Metodo que va a compactar la lista de clientes cuando un cliente se marche, ya sea por haber sido atendido o porque abandona la cola por otros motivos
-    
-    int i=0;
-    for(i=pos; i<contadorPeticiones-1; i++){
+
+    for(int i=pos; i<contadorPeticiones-1; i++){
         //Para compactar, se mueven elementos de las posiciones siguientes a la pasada como parámetro una posicion a la izquierda
         listaClientes[i] = listaClientes[i+1];
     }
     contadorPeticiones--;
-   
 
 }
+
 void escribirEnLog(char *id, char *mensaje){
 
     pthread_mutex_lock(&semaforoFichero);
@@ -502,4 +495,24 @@ void escribirEnLog(char *id, char *mensaje){
     fprintf(ficheroLogs, "[%s] %s: %s\n", stnow, id, mensaje);
     fclose(ficheroLogs);
     pthread_mutex_unlock(&semaforoFichero);
+}
+
+int buscarClientePrioritario(char tipo) {
+    int prioridadMaxima = buscarPrioridad(tipo);
+    for (int i = 0; i<contadorPeticiones; i++) {
+        if (listaClientes[i].prioridad == prioridadMaxima && listaClientes[i].tipo == tipo && listaClientes[i].atendido == 0) {
+            listaClientes[i].atendido = 1;
+            return i;
+        } 
+    }
+}
+
+void accionFinalTecnico(int tipoAtencion) {
+    for (int i = 0; i<contadorPeticiones; i++) {
+        if (listaClientes[i].atendido == 1) {
+            listaClientes[i].tipoDeAtencion = tipoAtencion;
+            listaClientes[i].atendido = 2;
+        } else {
+        }
+    }
 }
