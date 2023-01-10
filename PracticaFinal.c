@@ -544,7 +544,7 @@ void *accionesEncargado(void *arg) {
             sprintf(text, "Comienza la atencion al cliente %s en la posicion %d\n", listaClientes[i].id, i);
             pthread_mutex_unlock(&semaforoColaClientes);
             escribirEnLog((char *)arg, text);
-            free text;
+            free (text);
 
             int dormir, probabilidad;
             probabilidad = calculaAleatorio(1,100);
