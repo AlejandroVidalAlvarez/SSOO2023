@@ -188,7 +188,7 @@ int main(int argc, char *argv[]){
     
     //Creacion del hilo encargado
     pthread_t encargado;
-    pthread_create(&encargado, NULL, accionesEncargado, "Creado el encargado");
+    pthread_create(&encargado, NULL, accionesEncargado, "Encargado");
     
     //Creacion del hilo tecnico domiciliario
     pthread_t tecnicoDomiciliario;
@@ -370,7 +370,6 @@ void *accionesCliente(void *arg) {
    
     //mientras esta siendo atendido, no hace nada
     while(listaClientes[(intptr_t)arg].atendido==1){
-        //printf("Estoy siendo atendido");
         sleep(2);
     }
 
@@ -435,14 +434,8 @@ void *accionesCliente(void *arg) {
                 pthread_mutex_unlock(&semaforoColaClientes);
                 if (ignorarSolicitudes == 1) {
                     pthread_mutex_lock(&semaforoColaClientes);
-                    texto = malloc(sizeof(char) * 1024);
-                    sprintf(texto,"El cliente abandona el sistema mientras espera la visita al domicilio");
                     compactarListaClientes((intptr_t)arg);
                     contadorClientesRed--;
-                
-                    escribirEnLog(listaClientes[posicionArgumento].id,texto);
-                
-                    free(texto);
                     pthread_mutex_unlock(&semaforoColaClientes);
                 }
             }
@@ -604,7 +597,6 @@ void *accionesEncargado(void *arg) {
             for (int i = 0; i<contadorPeticiones; i++) {
                 if (strcmp(listaClientes[i].id,idCliente)==0&&listaClientes[i].atendido == 1) {
                     listaClientes[i].atendido = 2;
-                    printf("Cliente %c encontrado, el contador de red es: %d, y el contador total es: %d\n",*idCliente, contadorClientesRed, contadorPeticiones);
                     break;
             }
             }
@@ -870,11 +862,10 @@ void accionFinalTecnico(char idCliente[20]) {
     for (int i = 0; i<contadorPeticiones; i++) {
         if (strcmp(listaClientes[i].id,idCliente)==0&&listaClientes[i].atendido == 1) {
             listaClientes[i].atendido = 2;
-            printf("Cliente %c encontrado, el contador de la app es: %d, y el contador total es: %d\n",*idCliente, contadorClientesApp, contadorPeticiones);
             return;
         }
     }
-    printf("Cliente %c NO encontrado, el contador de la app es: %d, y el contador total es: %d\n",*idCliente, contadorClientesApp, contadorPeticiones);
+
 }
 
 //devuelve el numero de clientes que lleva atendidos el responsable cuyo id se ha pasado como argumento
@@ -919,11 +910,9 @@ void accionFinalResponsable(char idCliente[20]) {
     for (int i = 0; i<contadorPeticiones; i++) {
         if (strcmp(listaClientes[i].id,idCliente)==0&&listaClientes[i].atendido == 1) {
             listaClientes[i].atendido = 2;
-            printf("Cliente %c encontrado, el contador de red es: %d, y el contador total es: %d\n",*idCliente, contadorClientesRed, contadorPeticiones);
             return;
         }
     }
     
     printf("%s,%s",idCliente,listaClientes[0].id);
-    printf("Cliente %c NO encontrado, el contador de red es: %d, y el contador total es: %d\n",*idCliente, contadorClientesRed, contadorPeticiones);
-}
+    }
