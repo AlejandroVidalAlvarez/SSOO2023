@@ -24,8 +24,8 @@ struct Clientes{
     char tipo;
     //Su valor va desde 1 hasta 10(ambos incluidos), siendo 1 la prioridad mas baja y 10 la más alta.
     int prioridad;
-    //Su valor es 0=todo en regla, 1=mal identificados y 2=compañia equivocada
-    int tipoDeAtencion;
+    //Su valor es 0=no está solicitando visita, 1= solicita visita
+    int solicitud;
     //Hilo que ejecutan los clientes
     pthread_t hiloCliente;
 };
@@ -50,6 +50,7 @@ struct ResponsableReps{
 pthread_mutex_t semaforoFichero;
 pthread_mutex_t semaforoColaClientes;
 pthread_mutex_t semaforoSolicitudesDomiciliarias;
+int ignorarSolicitudes;
 
 
 //[][][][]  Variables globales  [][][][]
@@ -64,7 +65,7 @@ struct Clientes *listaClientes;
 FILE *ficheroLogs;
 struct Tecnico *listaTecnicos;
 struct ResponsableReps *listaResponsables;
-int ignorarSolicitudes;
+
 
 
 //[][][][]  Definicion de las funciones  [][][][]
@@ -195,12 +196,12 @@ void nuevoClienteRed(int signal) {
     if(ignorarSolicitudes==1){
         return;
     }
-    printf("Nueva peticion cliente red, actualmente hay %d peticiones.\n", contadorPeticiones+1);
-    
+    pthread_mutex_lock(&semaforoColaClientes);
+    printf("Nueva peticion cliente red, actualmente hay %d peticiones.\n", contadorPeticiones+1);  
     if(contadorPeticiones>=peticionesMax){
         printf("Peticion ignorada\n");
     }else{
-        pthread_mutex_lock(&semaforoColaClientes);
+        
         contadorClientesRed++;
         sprintf(listaClientes[contadorPeticiones].id,"clired_%d",contadorClientesRed);
         listaClientes[contadorPeticiones].atendido = 0;
@@ -208,29 +209,23 @@ void nuevoClienteRed(int signal) {
         listaClientes[contadorPeticiones].tipo = 'r';
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
         printf("Prioridad asignada\n");
-        int aux = calculaAleatorio(0,100);
-        if(aux<80){
-            listaClientes[contadorPeticiones].tipoDeAtencion=0;
-        }else if(80<aux<90){
-            listaClientes[contadorPeticiones].tipoDeAtencion=1;
-        }else{
-            listaClientes[contadorPeticiones].tipoDeAtencion=2;
-        }
         pthread_create(&listaClientes[contadorPeticiones].hiloCliente,NULL,accionesCliente,(void *)(intptr_t)contadorPeticiones);
         contadorPeticiones++;
-        pthread_mutex_unlock(&semaforoColaClientes);
+        
     } 
+    pthread_mutex_unlock(&semaforoColaClientes);
 }
 void nuevoClienteApp(int signal) {
     if(ignorarSolicitudes==1){
         return;
     }
+    pthread_mutex_lock(&semaforoColaClientes);
     printf("Nueva peticion cliente app, actualmente hay %d peticiones.\n", contadorPeticiones+1);
     
     if(contadorPeticiones>=peticionesMax){
         printf("Peticion ignorada\n");
     }else{
-        pthread_mutex_lock(&semaforoColaClientes);
+        
         contadorClientesApp++;
         sprintf(listaClientes[contadorPeticiones].id,"cliapp_%d",contadorClientesApp);
         listaClientes[contadorPeticiones].atendido = 0;
@@ -238,8 +233,9 @@ void nuevoClienteApp(int signal) {
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
         pthread_create(&listaClientes[contadorPeticiones].hiloCliente,NULL,accionesCliente,(void *)(intptr_t)contadorPeticiones);
         contadorPeticiones++;
-        pthread_mutex_unlock(&semaforoColaClientes);
+        
     } 
+    pthread_mutex_unlock(&semaforoColaClientes);
 }
 void manejadora_fin(int signal){
     printf("La llegada de solicitudes ha sido desactivada\n");
@@ -265,6 +261,14 @@ void *accionesCliente(void *arg) {
     intptr_t posicionArgumento1 = (intptr_t)arg;
     int posicionArgumento = (int)posicionArgumento1;
 
+    char *texto;
+    texto = malloc(sizeof(char) * 1024);
+    sprintf(texto,"El cliente de tipo %c ha entrado al sistema y espera ser atendido\n",listaClientes[posicionArgumento].tipo);
+    pthread_mutex_lock(&semaforoFichero);
+    escribirEnLog(listaClientes[posicionArgumento].id,texto);
+    pthread_mutex_unlock(&semaforoFichero);
+    free(texto);
+
     int contador;
     //mientras no esta siendo atendido, calculamos su comportamiento
     while(listaClientes[posicionArgumento].atendido==0){
@@ -277,6 +281,14 @@ void *accionesCliente(void *arg) {
             } else {
                 contadorClientesRed--;
             }
+            char *texto;
+            texto = malloc(sizeof(char) * 1024);
+            sprintf(texto,"El cliente ha abandonado el sistema por dificultad en la app\n");
+            pthread_mutex_lock(&semaforoFichero);
+            escribirEnLog(listaClientes[posicionArgumento].id,texto);
+            pthread_mutex_unlock(&semaforoFichero);
+            free(texto);
+
             compactarListaClientes(posicionArgumento);
             pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);
@@ -290,6 +302,13 @@ void *accionesCliente(void *arg) {
             } else {
                 contadorClientesRed--;
             }
+            texto = malloc(sizeof(char) * 1024);
+            sprintf(texto,"El cliente ha abandonado el sistema por cansarse de esperar\n");
+            pthread_mutex_lock(&semaforoFichero);
+            escribirEnLog(listaClientes[posicionArgumento].id,texto);
+            pthread_mutex_unlock(&semaforoFichero);
+            free(texto);
+
             compactarListaClientes(posicionArgumento);
             pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);
@@ -304,6 +323,13 @@ void *accionesCliente(void *arg) {
             } else {
                 contadorClientesRed--;
             }
+            texto = malloc(sizeof(char) * 1024);
+            sprintf(texto,"El cliente ha abandonado el sistema por problemas de conexión\n");
+            pthread_mutex_lock(&semaforoFichero);
+            escribirEnLog(listaClientes[posicionArgumento].id,texto);
+            pthread_mutex_unlock(&semaforoFichero);
+            free(texto);
+
             compactarListaClientes(posicionArgumento);
             pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);  
@@ -321,31 +347,81 @@ void *accionesCliente(void *arg) {
     //mientras esta siendo atendido, no hace nada
     while(listaClientes[(intptr_t)arg].atendido==1){
         //printf("Estoy siendo atendido");
-        sleep(1);
+        sleep(2);
     }
 
     //en caso de ser un cliente de app, abandona la lista, si es de red podria solicitar atencion domiciliaria
     if(listaClientes[(intptr_t)arg].tipo=='a'){
         pthread_mutex_lock(&semaforoColaClientes);
+
+        texto = malloc(sizeof(char) * 1024);
+        sprintf(texto,"El cliente ha terminado de ser atendido y abandona el sistema\n");
+        pthread_mutex_lock(&semaforoFichero);
+        escribirEnLog(listaClientes[posicionArgumento].id,texto);
+        pthread_mutex_unlock(&semaforoFichero);
+        free(texto);
+
         compactarListaClientes((intptr_t)arg);
         contadorClientesApp--;
         pthread_mutex_unlock(&semaforoColaClientes);
         pthread_exit(NULL);
     }else{
         if(calculaAleatorio(0,100)<30){ //caso de pedir atencion domiciliaria
-            
-        pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
-        if(nSolicitudesDomiciliarias<4){
-            nSolicitudesDomiciliarias++;
-        }
-        pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
+           int terminar = 0; //
+           while(terminar==0){
+            pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
+            if(nSolicitudesDomiciliarias<4){
+                nSolicitudesDomiciliarias++;
+                pthread_mutex_lock(&semaforoColaClientes);
+                texto = malloc(sizeof(char) * 1024);
+                sprintf(texto,"El cliente espera ha ser atendido en su domicilio\n");
+                pthread_mutex_lock(&semaforoFichero);
+                escribirEnLog(listaClientes[posicionArgumento].id,texto);
+                pthread_mutex_unlock(&semaforoFichero);
+                free(texto);
 
+                
+                listaClientes[posicionArgumento].solicitud = 1;
+                terminar = 1;
+                pthread_mutex_unlock(&semaforoColaClientes);
+                pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
+            }else{
+                pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
+                sleep(3);
+            }
+           } 
+            terminar = 0;
+            while(terminar==0){ //Espera a que el tecnico termine la visita a domicilio
+                pthread_mutex_lock(&semaforoColaClientes);
+                if(listaClientes[posicionArgumento].solicitud==0){
+                    //la ha terminado
+                    terminar = 1;
+                }
+                pthread_mutex_unlock(&semaforoColaClientes);
+            }
+            //el cliente comunica en el log su salida de la app tras la visita
+                pthread_mutex_lock(&semaforoColaClientes);
+                texto = malloc(sizeof(char) * 1024);
+                sprintf(texto,"El cliente abandona el sistema tras terminar la visita a su domicilio\n");
+                pthread_mutex_lock(&semaforoFichero);
+                escribirEnLog(listaClientes[posicionArgumento].id,texto);
+                pthread_mutex_unlock(&semaforoFichero);
+                free(texto);
+                pthread_mutex_unlock(&semaforoColaClientes);
         
 
         }else{
             pthread_mutex_lock(&semaforoColaClientes);
             compactarListaClientes((intptr_t)arg);
             contadorClientesRed--;
+
+            texto = malloc(sizeof(char) * 1024);
+            sprintf(texto,"El cliente abandona el sistema tras ser atendido y no solicitar visita a domicilio\n");
+            pthread_mutex_lock(&semaforoFichero);
+            escribirEnLog(listaClientes[posicionArgumento].id,texto);
+            pthread_mutex_unlock(&semaforoFichero);
+            free(texto);
+
             pthread_mutex_unlock(&semaforoColaClientes);
             pthread_exit(NULL);
         }
@@ -509,9 +585,19 @@ int buscarClientePrioritario(char tipo) {
 void accionFinalTecnico(int tipoAtencion) {
     for (int i = 0; i<contadorPeticiones; i++) {
         if (listaClientes[i].atendido == 1) {
-            listaClientes[i].tipoDeAtencion = tipoAtencion;
+            //listaClientes[i].tipoDeAtencion = tipoAtencion;
             listaClientes[i].atendido = 2;
         } else {
         }
+        /* puede ser util para arreglarlo
+        int aux = calculaAleatorio(0,100);
+        if(aux<80){
+            listaClientes[contadorPeticiones].tipoDeAtencion=0;
+        }else if(80<aux<90){
+            listaClientes[contadorPeticiones].tipoDeAtencion=1;
+        }else{
+            listaClientes[contadorPeticiones].tipoDeAtencion=2;
+        }
+        */
     }
 }
