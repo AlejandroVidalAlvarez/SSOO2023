@@ -625,7 +625,7 @@ int buscarClientePrioritario(char tipo) {
 
 void accionFinalTecnico(char idCliente[20]) {
     for (int i = 0; i<contadorPeticiones; i++) {
-        if (listaClientes[i].atendido == 1) {
+        if (strcmp(listaClientes[i].id,idCliente)&&listaClientes[i].atendido == 1) {
             listaClientes[i].atendido = 2;
             printf("Cliente encontrado, el contador de la app es: %d, y el contador total es: %d\n", contadorClientesApp, contadorPeticiones);
             return;
