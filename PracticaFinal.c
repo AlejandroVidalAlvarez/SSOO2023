@@ -415,6 +415,18 @@ void *accionesCliente(void *arg) {
                     terminar = 1;
                 }
                 pthread_mutex_unlock(&semaforoColaClientes);
+                if (ignorarSolicitudes == 1) {
+                    pthread_mutex_lock(&semaforoColaClientes);
+                    texto = malloc(sizeof(char) * 1024);
+                    sprintf(texto,"El cliente abandona el sistema mientras espera la visita al domicilio");
+                    compactarListaClientes((intptr_t)arg);
+                    contadorClientesRed--;
+                
+                    escribirEnLog(listaClientes[posicionArgumento].id,texto);
+                
+                    free(texto);
+                    pthread_mutex_unlock(&semaforoColaClientes);
+                }
             }
             //el cliente comunica en el log su salida de la app tras la visita
                 pthread_mutex_lock(&semaforoColaClientes);
@@ -594,7 +606,6 @@ void *accionesTecnicoDomiciliario(void *arg) {
             printf("El numero de solicitudes domiciliarias es de %d\n", nSolicitudesDomiciliarias);
         }
         printf("Comienza la atencion domiciliaria\n");
-        pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
         escribirEnLog("Tecnico domiciliario", "Comienza la atencion domiciliaria");
         ignorarSolicitudesDomiciliarias = 1;
         int dormir = 0;
@@ -613,8 +624,8 @@ void *accionesTecnicoDomiciliario(void *arg) {
             }
         }
         ignorarSolicitudesDomiciliarias = 0;
-        pthread_mutex_unlock(&semaforoColaClientes);
         nSolicitudesDomiciliarias = 0;
+        pthread_mutex_unlock(&semaforoColaClientes);
         pthread_cond_broadcast(&condicionTecnicoDomiciliario);
         pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
         printf("Acabo la atencion domiciliaria\n");
