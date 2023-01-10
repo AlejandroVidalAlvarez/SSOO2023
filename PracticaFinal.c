@@ -537,8 +537,10 @@ void *accionesEncargado(void *arg) {
             }else{
                 i = buscarClientePrioritario('a');
             }
-            //Se cambia el valor del atributo para que el cliente sepa que esta siendo atentedido
-            listaClientes[i].atendido=1;
+
+            //Guardar el id del cliente que se atiende para luego localizarlo a traves de su id
+            char idCliente[20];
+            strcpy(idCliente, listaClientes[i].id);
 
             char *text = malloc(sizeof(char) * 1024);
             sprintf(text, "Comienza la atencion al cliente %s en la posicion %d\n", listaClientes[i].id, i);
@@ -562,9 +564,15 @@ void *accionesEncargado(void *arg) {
 
 
             sleep(dormir);
-            //Se cambia el valor del atributo del para notificar al cliente que ha sido atendido
+            //Se cambia el valor del atributo atendido para notificar al cliente que ha sido atendido
             pthread_mutex_lock(&semaforoColaClientes);
-            listaClientes[i].atendido=2;
+            for (int i = 0; i<contadorPeticiones; i++) {
+                if (strcmp(listaClientes[i].id,idCliente)==0&&listaClientes[i].atendido == 1) {
+                    listaClientes[i].atendido = 2;
+                    printf("Cliente %c encontrado, el contador de red es: %d, y el contador total es: %d\n",*idCliente, contadorClientesRed, contadorPeticiones);
+                    break;
+            }
+            }
             pthread_mutex_unlock(&semaforoColaClientes);
             escribirEnLog((char *)arg, texto);
             free(texto);
