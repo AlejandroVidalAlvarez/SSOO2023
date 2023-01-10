@@ -128,13 +128,6 @@ int main(int argc, char *argv[]){
     ignorarSolicitudes = 0;
     ignorarSolicitudesDomiciliarias = 0;
     
-    //Definicion de los punteros de las listas de clientes, tecnicos y responsables
-    listaClientes =(struct Clientes*) malloc(sizeof(struct Clientes) * peticionesMax);
-    listaTecnicos =(struct Tecnico*) malloc(sizeof(struct Tecnico) * numTecnicos);
-    listaResponsables =(struct ResponsableReps*) malloc(sizeof(struct ResponsableReps) * numResponsables);
-    srand(getpid());
-    
-    
     //Controlamos argumentos programa
 	switch(argc){
 		case 3:
@@ -148,6 +141,12 @@ int main(int argc, char *argv[]){
 		    printf("ATENCION: el numero de parámetro no es el esperado, por lo que se van a asignar valores por defecto\n");
 		    break;
 	}
+
+    //Definicion de los punteros de las listas de clientes, tecnicos y responsables
+    listaClientes =(struct Clientes*) malloc(sizeof(struct Clientes) * peticionesMax);
+    listaTecnicos =(struct Tecnico*) malloc(sizeof(struct Tecnico) * numTecnicos);
+    listaResponsables =(struct ResponsableReps*) malloc(sizeof(struct ResponsableReps) * numResponsables);
+    srand(getpid());
 
 
     //Crear el archivo donde se almacenen los logs
@@ -502,7 +501,7 @@ void *accionesTecnico(void *arg) {
             
             int i = buscarClientePrioritario('a');
             //Un if de seguridad, aquí no deberia entrar nunca
-            if(!((i>=0)&&(i<20))){
+            if(!((i>=0)&&(i<peticionesMax))){
                 if(i==-1){
                     pthread_mutex_unlock(&semaforoColaClientes);
                     continue;
@@ -683,7 +682,7 @@ void *accionesresponsablesReparacion(void *arg) {
             
             int i = buscarClientePrioritario('r');
             //if de seguridad, no deberia entrar aqui nunca, es codigo que evitaria que el programa fallase
-            if(!((i>=0)&&(i<20))){
+            if(!((i>=0)&&(i<peticionesMax))){
                 if(i==-1){
                     pthread_mutex_unlock(&semaforoColaClientes);
                     continue;
@@ -790,7 +789,7 @@ int comprobarDescansoTecnico(void *arg) {
 //metodo que resetea el contador de clientes atendidos desde el ultimo descanso del tecnico cuyo id se pasa como argumento
 void resetearContadorTecnico(void *arg){
         
-    for (int i = 0; i<2; i++) {
+    for (int i = 0; i<numTecnicos; i++) {
         if (listaTecnicos[i].id == (char *)arg) {
             listaTecnicos[i].count = 0;
             return;
@@ -801,7 +800,7 @@ void resetearContadorTecnico(void *arg){
 
 //aumenta el contador de clientes atendidos desde el ultimo descanso del tecnico cuyo id se pasa como argumento
 void sumarContadorTecnico(void *arg){
-    for (int i = 0; i<2; i++) {
+    for (int i = 0; i<numTecnicos; i++) {
         if (listaTecnicos[i].id == (char *)arg) {
             listaTecnicos[i].count++;
             return;
@@ -882,7 +881,7 @@ void accionFinalTecnico(char idCliente[20]) {
 int comprobarDescansoResponsable(void *arg) {
 
     int num = 0;
-    for (int i = 0; i<2; i++) {
+    for (int i = 0; i<numResponsables; i++) {
         if (listaResponsables[i].id == (char *)arg) {
             return listaResponsables[i].count;
         }
@@ -894,7 +893,7 @@ int comprobarDescansoResponsable(void *arg) {
 //metodo que resetea el contador de clientes atendidos desde el ultimo descanso del responsable cuyo id se pasa como argumento
 void resetearContadorResponsable(void *arg){
         
-    for (int i = 0; i<2; i++) {
+    for (int i = 0; i<numResponsables; i++) {
         if (listaResponsables[i].id == (char *)arg) {
             listaResponsables[i].count = 0;
             return;
@@ -905,7 +904,7 @@ void resetearContadorResponsable(void *arg){
 
 //aumenta el contador de clientes atendidos desde el ultimo descanso del responsable cuyo id se pasa como argumento
 void sumarContadorResponsable(void *arg){
-    for (int i = 0; i<2; i++) {
+    for (int i = 0; i<numResponsables; i++) {
         if (strcmp(listaResponsables[i].id, (char *)arg)) {
             listaResponsables[i].count++;
             return;
