@@ -137,11 +137,15 @@ int main(int argc, char *argv[]){
     
     //Controlamos argumentos programa
 	switch(argc){
-		case 1:
-            break;
+		case 3:
+            if(atoi(argv[1])>0 && atoi(argv[2])>0){
+                peticionesMax = atoi(argv[1]);
+                numTecnicos = atoi(argv[2]);
+            }else{
+                printf("ATENCION: los parametro introducidos son incorrectos, por lo que se procede a ejecutar con los valores por defecto\n");
+            }
 		default:
-            /* Si se introducen mas de 2 parametros, se muestra un error y se procede a la ejecucion con los valores por defecto. */
-		    printf("WARNING: Este programa no contempla el uso de parametros de entrada, se procede a ignorar los parametros introducidos continuar la ejecución por defecto");
+		    printf("ATENCION: el numero de parámetro no es el esperado, por lo que se van a asignar valores por defecto\n");
 		    break;
 	}
 
