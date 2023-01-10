@@ -99,7 +99,8 @@ void accionFinalResponsable(char idCliente[20]);
 
 int main(int argc, char *argv[]){
 
-	struct sigaction sapp;
+	//Se enmascaran las señales para la creacion de clientes y la finalizacion del programa
+    struct sigaction sapp;
 	sapp.sa_handler = nuevoClienteApp;
     if(-1==sigaction(SIGUSR1, &sapp,NULL)){
 	      perror("ClienteAPP: sigaction\n");
@@ -202,6 +203,8 @@ int main(int argc, char *argv[]){
 }
 
 //[][][][]  Metodos Llegada Señales  [][][][]
+
+//Metodo que, en caso de poderse aceptar nuevas peticiones crea un nuevo cliente de tipo Red y lo añade a la cola
 void nuevoClienteRed(int signal) {
     if(ignorarSolicitudes==1){
         return;
@@ -212,6 +215,7 @@ void nuevoClienteRed(int signal) {
         printf("Peticion ignorada\n");
     }else{
         
+        //Asignacion de valores a los atributos de los clinentes creados
         contadorClientesRed++;
         sprintf(listaClientes[contadorPeticiones].id,"clired_%d",contadorClientesRed);
         listaClientes[contadorPeticiones].atendido = 0;
@@ -223,6 +227,8 @@ void nuevoClienteRed(int signal) {
     } 
     pthread_mutex_unlock(&semaforoColaClientes);
 }
+
+//Metodo que, en caso de poderse aceptar nuevas peticiones crea un nuevo cliente de tipo App y lo añade a la cola
 void nuevoClienteApp(int signal) {
     if(ignorarSolicitudes==1){
         return;
@@ -245,6 +251,8 @@ void nuevoClienteApp(int signal) {
     } 
     pthread_mutex_unlock(&semaforoColaClientes);
 }
+
+//manejadora que se encarga de terminar el programa
 void manejadora_fin(int signal){
     printf("La llegada de solicitudes ha sido desactivada\n");
     ignorarSolicitudes = 1;
@@ -265,6 +273,8 @@ void manejadora_fin(int signal){
 
 
 //[][][][]  Metodos Tareas Principales  [][][][]
+
+//Comportamiento de los hilos cliente
 void *accionesCliente(void *arg) {
     intptr_t posicionArgumento1 = (intptr_t)arg;
     int posicionArgumento = (int)posicionArgumento1;
@@ -280,6 +290,8 @@ void *accionesCliente(void *arg) {
     //mientras no esta siendo atendido, calculamos su comportamiento
     while(listaClientes[posicionArgumento].atendido==0){
         int aleat=calculaAleatorio(1, 100);
+        
+        //CAda 2 segundos, se omprueba si el cliente se marcha porque encuentra dificil la app.
         if(contador%2==0){
            if(aleat <= 10){
             pthread_mutex_lock(&semaforoColaClientes);
@@ -301,6 +313,7 @@ void *accionesCliente(void *arg) {
             pthread_exit(NULL);
             }
         }
+        //Cada 8 segundos se comprueba si el cliente se marcha porque se ha cansado de esperar.
         if(contador%8==0){
            if(aleat > 10 && aleat <= 30){
             pthread_mutex_lock(&semaforoColaClientes);
@@ -321,6 +334,7 @@ void *accionesCliente(void *arg) {
             pthread_exit(NULL);
             }
         }
+        //Cada 2 segundos se comprueba si el cliente se marcha porque pierde la conexion
         if(contador%2==0){
            if(aleat > 30){
             if(calculaAleatorio(1,100)>95){
@@ -373,7 +387,8 @@ void *accionesCliente(void *arg) {
         pthread_mutex_unlock(&semaforoColaClientes);
         pthread_exit(NULL);
     }else{
-        if(calculaAleatorio(0,100)<30){ //caso de pedir atencion domiciliaria
+        //caso de pedir atencion domiciliaria
+        if(calculaAleatorio(0,100)<30){ 
            int terminar = 0; //
            while(terminar==0){
             pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
@@ -401,10 +416,10 @@ void *accionesCliente(void *arg) {
                 terminar = 1;
                 pthread_mutex_unlock(&semaforoColaClientes);
                 pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
-            }else{
+            }else{//Mientras haya mas de 4 solicitudes, los clientes esperan a poder solicitar
                 pthread_cond_wait(&condicionTecnicoDomiciliario, &semaforoSolicitudesDomiciliarias);
                 pthread_mutex_unlock(&semaforoSolicitudesDomiciliarias);
-                sleep(3);
+                sleep(1);
             }
            }
             terminar = 0;
@@ -452,6 +467,7 @@ void *accionesTecnico(void *arg) {
     
     printf("Creado %s\n", (char *)arg);
     while (1==1) {
+        //El tecnico comprueba si le toca descansar
         if(comprobarDescansoTecnico(arg)>=5){
             
             escribirEnLog((char *)arg, "Comienza el descanso");
@@ -469,6 +485,7 @@ void *accionesTecnico(void *arg) {
         if (contadorClientesApp > 0) {
             
             int i = buscarClientePrioritario('a');
+            //Un if de seguridad, aquí no deberia entrar nunca
             if(!((i>=0)&&(i<20))){
                 if(i==-1){
                     pthread_mutex_unlock(&semaforoColaClientes);
@@ -488,6 +505,7 @@ void *accionesTecnico(void *arg) {
             escribirEnLog((char *)arg, text);
             free(text);
 
+            //Se calcula con un aleatorio el tipo de atencion que requiere el cliente que se atiende
             int probabilidad = calculaAleatorio(1, 100);
             int dormir, tipoAtencion;
             char *texto = malloc(sizeof(char) * 1024);
@@ -518,8 +536,9 @@ void *accionesTecnico(void *arg) {
             sleep(dormir);
 
         } else {
+            //Cuando no hay clientes para atender, duerme 1 segundo
             pthread_mutex_unlock(&semaforoColaClientes);
-            sleep(3);//TODO es un sleep1, cambiar antes de entregar
+            sleep(1);
         }
     }
     pthread_exit(NULL);
@@ -548,6 +567,7 @@ void *accionesEncargado(void *arg) {
             escribirEnLog((char *)arg, text);
             free (text);
 
+            //Calcula con un aleatorio el tipo de atencion que requiere elccliente que esta siendo atendido
             int dormir, probabilidad;
             probabilidad = calculaAleatorio(1,100);
             char *texto = malloc(sizeof(char) * 1024);
@@ -590,12 +610,15 @@ void *accionesTecnicoDomiciliario(void *arg) {
     while (1==1) {
         pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
         while (nSolicitudesDomiciliarias < 4) {
+            //mientras no haya 4 solicitudes de atencion domiciliaria no hace nada
             pthread_cond_wait(&condicionTecnicoDomiciliario, &semaforoSolicitudesDomiciliarias);
             printf("El numero de solicitudes domiciliarias es de %d\n", nSolicitudesDomiciliarias);
         }
         printf("Comienza la atencion domiciliaria\n");
         pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
         escribirEnLog("Tecnico domiciliario", "Comienza la atencion domiciliaria");
+        //Cuando tiene el valor 1, no se acaptará ninguna snueva solicitud domicliaria hasta que se hayan atendido las 4. Las solicitudes enviadas en el
+        //tiempo que estan siendo atendidas las 4, seran aceptadas cuando el tecnico domiciliario termine
         ignorarSolicitudesDomiciliarias = 1;
         int dormir = 0;
         pthread_mutex_lock(&semaforoColaClientes);
@@ -625,6 +648,8 @@ void *accionesTecnicoDomiciliario(void *arg) {
 void *accionesresponsablesReparacion(void *arg) {
     printf("Creado %s\n", (char *)arg);
     while (1==1) {
+        
+        //comprueba si le toca descansar
         if(comprobarDescansoResponsable(arg)>=6){
             
             escribirEnLog((char *)arg, "Comienza el descanso");
@@ -642,6 +667,7 @@ void *accionesresponsablesReparacion(void *arg) {
         if (contadorClientesRed > 0) {
             
             int i = buscarClientePrioritario('r');
+            //if de seguridad, no deberia entrar aqui nunca, es codigo que evitaria que el programa fallase
             if(!((i>=0)&&(i<20))){
                 if(i==-1){
                     pthread_mutex_unlock(&semaforoColaClientes);
@@ -661,6 +687,7 @@ void *accionesresponsablesReparacion(void *arg) {
             escribirEnLog((char *)arg, text);
             free(text);
 
+            //Se calcula con un aleatorio el tipo de atencion que requiere el cliente que se atiende
             int probabilidad = calculaAleatorio(1, 100);
             int dormir, tipoAtencion;
             char *texto = malloc(sizeof(char) * 1024);
@@ -691,8 +718,9 @@ void *accionesresponsablesReparacion(void *arg) {
             sleep(dormir);
 
         } else {
+            //si no hay ningun cliente por atender, espera 1 segundo
             pthread_mutex_unlock(&semaforoColaClientes);
-            sleep(3);//TODO es un sleep1, cambiar antes de entregar
+            sleep(1);
         }
     }
     pthread_exit(NULL);
@@ -705,6 +733,7 @@ int calculaAleatorio(int inicio, int fin){
     return rand() % (fin-inicio+1) + inicio;
 }
 
+//recibe como parametro el id del cliente que ha sido atendido y le cambia el atributo atendido
 void ponerComoAtendido(char idBuscado[20]){
 
     for (int i = 0; i<contadorPeticiones; i++) {
@@ -716,6 +745,8 @@ void ponerComoAtendido(char idBuscado[20]){
 
 }
 
+
+//recibe un tipo de cliente y devuelve la posicien en lista del primer cliente de ese tipo que tenga la mayor prioridad
 int buscarPrioridad(char tipo) {
 
     int maximo = -1;
@@ -727,10 +758,12 @@ int buscarPrioridad(char tipo) {
     
     return maximo;
 }
+
+//devuelve el numero de clientes que lleva atendidos el tecnico cuyo id se ha pasado como argumento
 int comprobarDescansoTecnico(void *arg) {
 
     int num = 0;
-    for (int i = 0; i<2; i++) {
+    for (int i = 0; i<numTecnicos; i++) {
         if (listaTecnicos[i].id == (char *)arg) {
             return listaTecnicos[i].count;
         }
@@ -738,6 +771,8 @@ int comprobarDescansoTecnico(void *arg) {
     printf("Error, no se encontró el tecnico\n");
     return num;
 }
+
+//metodo que resetea el contador de clientes atendidos desde el ultimo descanso del tecnico cuyo id se pasa como argumento
 void resetearContadorTecnico(void *arg){
         
     for (int i = 0; i<2; i++) {
@@ -748,6 +783,8 @@ void resetearContadorTecnico(void *arg){
     }
     printf("Error, no se reseteó el contador del tecnico\n");
 }
+
+//aumenta el contador de clientes atendidos desde el ultimo descanso del tecnico cuyo id se pasa como argumento
 void sumarContadorTecnico(void *arg){
     for (int i = 0; i<2; i++) {
         if (listaTecnicos[i].id == (char *)arg) {
@@ -758,8 +795,9 @@ void sumarContadorTecnico(void *arg){
     printf("Error al sumar");
     
 }
+
+//Metodo que va a compactar la lista de clientes cuando un cliente se marche, ya sea por haber sido atendido o porque abandona la cola por otros motivos
 void compactarListaClientes(int pos){ 
-    //Metodo que va a compactar la lista de clientes cuando un cliente se marche, ya sea por haber sido atendido o porque abandona la cola por otros motivos
     if(contadorPeticiones==0){
         return;
     }else if(contadorPeticiones==1){
@@ -785,6 +823,7 @@ void compactarListaClientes(int pos){
     }
 }
 
+//metodo que escribe en el log el mesaje pasado como argumento a nombre del hilo con el id pasado como argumento
 void escribirEnLog(char *id, char *mensaje){
 
     pthread_mutex_lock(&semaforoFichero);
@@ -800,6 +839,7 @@ void escribirEnLog(char *id, char *mensaje){
     pthread_mutex_unlock(&semaforoFichero);
 }
 
+//devuelve la posicion en la lista del cliente del tipo pasado como argumento con la mayor prioridad
 int buscarClientePrioritario(char tipo) {
     int prioridadMaxima = buscarPrioridad(tipo);
     for (int i = 0; i<contadorPeticiones; i++) {
@@ -811,6 +851,7 @@ int buscarClientePrioritario(char tipo) {
     return prioridadMaxima;
 }
 
+//metodo ejecutado por los tecnicos, que cambia el atributo atendido del cliente cuyo id se ha pasado como argumento
 void accionFinalTecnico(char idCliente[20]) {
     for (int i = 0; i<contadorPeticiones; i++) {
         if (strcmp(listaClientes[i].id,idCliente)==0&&listaClientes[i].atendido == 1) {
@@ -822,6 +863,7 @@ void accionFinalTecnico(char idCliente[20]) {
     printf("Cliente %c NO encontrado, el contador de la app es: %d, y el contador total es: %d\n",*idCliente, contadorClientesApp, contadorPeticiones);
 }
 
+//devuelve el numero de clientes que lleva atendidos el responsable cuyo id se ha pasado como argumento
 int comprobarDescansoResponsable(void *arg) {
 
     int num = 0;
@@ -833,6 +875,8 @@ int comprobarDescansoResponsable(void *arg) {
     printf("Error, no se encontró el responsable\n");
     return num;
 }
+
+//metodo que resetea el contador de clientes atendidos desde el ultimo descanso del responsable cuyo id se pasa como argumento
 void resetearContadorResponsable(void *arg){
         
     for (int i = 0; i<2; i++) {
@@ -843,6 +887,8 @@ void resetearContadorResponsable(void *arg){
     }
     printf("Error, no se reseteó el contador del responsable\n");
 }
+
+//aumenta el contador de clientes atendidos desde el ultimo descanso del responsable cuyo id se pasa como argumento
 void sumarContadorResponsable(void *arg){
     for (int i = 0; i<2; i++) {
         if (strcmp(listaResponsables[i].id, (char *)arg)) {
@@ -853,6 +899,8 @@ void sumarContadorResponsable(void *arg){
     printf("Error al sumar\n");
     
 }
+
+//metodo ejecutado por los responsables, que cambia el atributo atendido del cliente cuyo id se ha pasado como argumento
 void accionFinalResponsable(char idCliente[20]) {
     for (int i = 0; i<contadorPeticiones; i++) {
         if (strcmp(listaClientes[i].id,idCliente)==0&&listaClientes[i].atendido == 1) {
