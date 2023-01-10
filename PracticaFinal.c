@@ -459,6 +459,12 @@ void *accionesTecnico(void *arg) {
             printf("El cliente se llama %s", listaClientes[i].id);
             char idCliente[20];
             strcpy(idCliente, listaClientes[i].id);
+
+            char *text = malloc(sizeof(char) * 1024);
+            sprintf(text,"Comienza la atencion al cliente llamado %s",listaClientes[i].id);
+            escribirEnLog((char *)arg, text);
+            free(text);
+
             pthread_mutex_unlock(&semaforoColaClientes);
             int probabilidad = calculaAleatorio(1, 100);
             int dormir, tipoAtencion;
@@ -480,7 +486,7 @@ void *accionesTecnico(void *arg) {
                 dormir = calculaAleatorio(1, 2);
             }
             
-            escribirEnLog((char *)arg, "Comienza la atencion al cliente");
+            
             
             
             sleep(dormir);
@@ -578,13 +584,29 @@ void sumarContadorTecnico(void *arg){
 }
 void compactarListaClientes(int pos){ 
     //Metodo que va a compactar la lista de clientes cuando un cliente se marche, ya sea por haber sido atendido o porque abandona la cola por otros motivos
-
+    if(contadorPeticiones==0){
+        return;
+    }else if(contadorPeticiones==1){
+        contadorPeticiones=0;
+            strncpy(listaClientes[0].id,"",20);
+            listaClientes[0].atendido = 0;
+            listaClientes[0].tipo =' ';
+            listaClientes[0].solicitud = 0;
+            listaClientes[0].prioridad=0;
+        return;
+    }else{
     for(int i=pos; i<contadorPeticiones-1; i++){
         //Para compactar, se mueven elementos de las posiciones siguientes a la pasada como parámetro una posicion a la izquierda
         listaClientes[i] = listaClientes[i+1];
     }
+    //eliminamos el de la ultima posicion porque está duplicado en la pos anterior  Ejemplo: [1 2 3] ---eliminamos pos==0---> [2 3 3]
+    strncpy(listaClientes[contadorPeticiones-1].id,"",20);
+    listaClientes[contadorPeticiones-1].atendido = 0;
+    listaClientes[contadorPeticiones-1].tipo =' ';
+    listaClientes[contadorPeticiones-1].solicitud = 0;
+    listaClientes[contadorPeticiones-1].prioridad=0;
     contadorPeticiones--;
-
+    }
 }
 
 void escribirEnLog(char *id, char *mensaje){

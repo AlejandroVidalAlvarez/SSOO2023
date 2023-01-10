@@ -1,3 +1,24 @@
-[09/ 01/ 23 21: 29: 28] Tecnico: atendiendo a cliente
-[09/ 01/ 23 21: 31: 11] FINAL: La llegada de solicitudes ha sido desactivada
-[09/ 01/ 23 21: 31: 24] FINAL: La llegada de solicitudes ha sido desactivada
+[10/ 01/ 23 13: 28: 40] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 13: 28: 40] cliapp_1: El cliente ha abandonado el sistema por cansarse de esperar
+[10/ 01/ 23 13: 28: 44] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 13: 28: 44] cliapp_1: El cliente ha abandonado el sistema por cansarse de esperar
+[10/ 01/ 23 13: 28: 44] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 13: 28: 44] cliapp_1: El cliente ha abandonado el sistema por cansarse de esperar
+[10/ 01/ 23 13: 28: 47] cliapp_1: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 13: 28: 48] tecnico_1: Comienza la atencion al cliente llamado cliapp_1
+[10/ 01/ 23 13: 28: 48] tecnico_2: Comienza la atencion al cliente llamado 
+[10/ 01/ 23 13: 28: 48] cliapp_2: El cliente de tipo a ha entrado al sistema y espera ser atendido
+[10/ 01/ 23 13: 28: 49] tecnico_1: Finaliza la atencion al cliente, todo en regla
+[10/ 01/ 23 13: 28: 49] tecnico_1: Comienza la atencion al cliente llamado 
+[10/ 01/ 23 13: 28: 49] tecnico_2: Finaliza la atencion al cliente, todo en regla
+[10/ 01/ 23 13: 28: 49] tecnico_2: Comienza la atencion al cliente llamado 
+[10/ 01/ 23 13: 28: 49] cliapp_2: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 13: 28: 50] tecnico_1: Finaliza la atencion al cliente, compañía equivocada
+[10/ 01/ 23 13: 28: 50] tecnico_1: Comienza la atencion al cliente llamado 
+[10/ 01/ 23 13: 28: 50] tecnico_2: Finaliza la atencion al cliente, compañía equivocada
+[10/ 01/ 23 13: 28: 50] tecnico_2: Comienza la atencion al cliente llamado 
+[10/ 01/ 23 13: 28: 50] cliapp_1: El cliente ha terminado de ser atendido y abandona el sistema
+[10/ 01/ 23 13: 28: 53] tecnico_1: Finaliza la atencion al cliente, todo en regla
+[10/ 01/ 23 13: 28: 53] tecnico_2: Finaliza la atencion al cliente, todo en regla
+[10/ 01/ 23 13: 29: 02] FINAL: La llegada de solicitudes ha sido desactivada
+[10/ 01/ 23 13: 29: 02] TERMINADO: Saliendo del programa
