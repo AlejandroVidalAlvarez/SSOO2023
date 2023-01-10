@@ -526,6 +526,55 @@ void *accionesTecnico(void *arg) {
 }
 void *accionesEncargado(void *arg) {
     printf("%s\n", (char *)arg);
+    
+    while(1==1){
+        int i=0;
+        pthread_mutex_lock(&semaforoColaClientes);
+        if(contadorClientesApp>0){
+            //1ºBusca entre los clientes de red, en caso de haber clientes de este tipo, buscará entre los de app
+            if(contadorClientesRed>0){
+                i = buscarClientePrioritario('r');
+            }else{
+                i = buscarClientePrioritario('a');
+            }
+            //Se cambia el valor del atributo para que el cliente sepa que esta siendo atentedido
+            listaClientes[i].atendido=1;
+
+            char *text = malloc(sizeof(char) * 1024);
+            sprintf(text, "Comienza la atencion al cliente %s en la posicion %d\n", listaClientes[i].id, i);
+            pthread_mutex_unlock(&semaforoColaClientes);
+            escribirEnLog((char *)arg, text);
+            free text;
+
+            int dormir, probabilidad;
+            probabilidad = calculaAleatorio(1,100);
+            char *texto = malloc(sizeof(char) * 1024);
+            if(probabilidad<=80){
+                dormir = calculaAleatorio(1,4);
+                sprintf(texto, "Atencion finalizada, todo el regla");
+            }else if(probabilidad<=90){
+                dormir = calculaAleatorio(2,6);
+                sprintf(texto, "Atencion finalizada, cliente mal identificado");
+            }else{
+                dormir = calculaAleatorio(1,2);
+                sprintf(texto, "Atencion finalizada, comapañia equivocada");
+            }
+
+
+            sleep(dormir);
+            //Se cambia el valor del atributo del para notificar al cliente que ha sido atendido
+            pthread_mutex_lock(&semaforoColaClientes);
+            listaClientes[i].atendido=2;
+            pthread_mutex_unlock(&semaforoColaClientes);
+            escribirEnLog((char *)arg, texto);
+            free(texto);
+            
+        }else{//Caso de que no haya ningun cliente para ser atendido
+            pthread_mutex_unlock(&semaforoColaClientes);
+            sleep(3);
+        }
+    }
+
     pthread_exit(NULL);
 }
 void *accionesTecnicoDomiciliario(void *arg) {
