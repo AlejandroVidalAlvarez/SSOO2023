@@ -215,10 +215,8 @@ void nuevoClienteRed(int signal) {
         contadorClientesRed++;
         sprintf(listaClientes[contadorPeticiones].id,"clired_%d",contadorClientesRed);
         listaClientes[contadorPeticiones].atendido = 0;
-        printf("Atributo atendido asignado\n");
         listaClientes[contadorPeticiones].tipo = 'r';
         listaClientes[contadorPeticiones].prioridad = calculaAleatorio(1,10);
-        printf("Prioridad asignada\n");
         pthread_create(&listaClientes[contadorPeticiones].hiloCliente,NULL,accionesCliente,(void *)(intptr_t)contadorPeticiones);
         contadorPeticiones++;
         
@@ -417,6 +415,8 @@ void *accionesCliente(void *arg) {
                 pthread_mutex_lock(&semaforoColaClientes);
                 texto = malloc(sizeof(char) * 1024);
                 sprintf(texto,"El cliente abandona el sistema tras terminar la visita a su domicilio");
+                compactarListaClientes((intptr_t)arg);
+                contadorClientesRed--;
                 
                 escribirEnLog(listaClientes[posicionArgumento].id,texto);
                 
@@ -533,21 +533,24 @@ void *accionesTecnicoDomiciliario(void *arg) {
         }
         printf("Comienza la atencion domiciliaria\n");
         escribirEnLog("Tecnico domiciliario", "Comienza la atencion domiciliaria");
-        pthread_mutex_lock(&semaforoSolicitudesDomiciliarias);
         ignorarSolicitudesDomiciliarias = 1;
+        int dormir = 0;
+        pthread_mutex_lock(&semaforoColaClientes);
         for (int i = 0; i<nSolicitudesDomiciliarias; i++) {
-            pthread_mutex_lock(&semaforoColaClientes);
-            for (int j = 0; j<contadorPeticiones; i++) {
+            printf("Yendo a atender al cliente %d a su casa\n", i);
+            for (int j = 0; j<contadorPeticiones; j++) {
                 if (listaClientes[j].solicitud == 1) {
                     char* texto = malloc(sizeof(char) + 1024);
                     sprintf(texto, "Atendido el cliente %d", i);
                     listaClientes[i].solicitud = 0;
-                    pthread_mutex_lock(&semaforoColaClientes);
-                    sleep(1);
+                    pthread_mutex_unlock(&semaforoColaClientes);
+                    dormir++;
                     escribirEnLog("Tecnico domiciliario", texto);
+                    break;
                 }
             }
         }
+        pthread_mutex_unlock(&semaforoColaClientes);
         nSolicitudesDomiciliarias = 0;
         printf("Acabo la atencion domiciliaria\n");
         escribirEnLog("Tecnico domiciliario", "Finaliza la atencion domiciliaria");
@@ -579,7 +582,7 @@ void *accionesresponsablesReparacion(void *arg) {
                     pthread_mutex_unlock(&semaforoColaClientes);
                     continue;
                 }
-                printf("error al buscar el cliente prioritario, realmente hay clientes?i-->%d\n",i);
+                printf("Error al buscar el cliente prioritario, realmente hay clientes?i-->%d\n",i);
                 pthread_mutex_unlock(&semaforoColaClientes);
                 sleep(3);//TODO aqui nunca deberia entrar por tanto eliminar antes de entregar 
                 continue;//siguiente iteracion del while
@@ -667,7 +670,7 @@ int comprobarDescansoTecnico(void *arg) {
             return listaTecnicos[i].count;
         }
     }
-    printf("Error, no se encontró el tecnico");
+    printf("Error, no se encontró el tecnico\n");
     return num;
 }
 void resetearContadorTecnico(void *arg){
@@ -678,7 +681,7 @@ void resetearContadorTecnico(void *arg){
             return;
         }
     }
-    printf("Error, no se reseteó el contador del tecnico");
+    printf("Error, no se reseteó el contador del tecnico\n");
 }
 void sumarContadorTecnico(void *arg){
     for (int i = 0; i<2; i++) {
@@ -751,8 +754,6 @@ void accionFinalTecnico(char idCliente[20]) {
             return;
         }
     }
-    
-    printf("%s,%s",idCliente,listaClientes[0].id);
     printf("Cliente %c NO encontrado, el contador de la app es: %d, y el contador total es: %d\n",*idCliente, contadorClientesApp, contadorPeticiones);
 }
 
