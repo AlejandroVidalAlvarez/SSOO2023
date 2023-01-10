@@ -447,7 +447,16 @@ void *accionesTecnico(void *arg) {
         }
         pthread_mutex_lock(&semaforoColaClientes);
         if (contadorClientesApp > 0) {
+            printf("Buscando a cliente para atender");
             int i = buscarClientePrioritario('a');
+            if(!(i>=0)){
+                printf("error al buscar el cliente prioritario, realmente hay clientes?i-->%d\n",i);
+                pthread_mutex_unlock(&semaforoColaClientes);
+                sleep(3);//TODO aqui nunca deberia entrar por tanto eliminar antes de entregar 
+                continue;//siguiente iteracion del while
+            }
+            printf("Voy a atender al cliente de la pos %d",i);
+            printf("El cliente se llama %s", listaClientes[i].id);
             char idCliente[20];
             strcpy(idCliente, listaClientes[i].id);
             pthread_mutex_unlock(&semaforoColaClientes);
@@ -455,14 +464,17 @@ void *accionesTecnico(void *arg) {
             int dormir, tipoAtencion;
             char *texto = malloc(sizeof(char) * 1024);
             if (probabilidad <= 80) {
+                printf("Finaliza la atencion al cliente, todo en regla");
                 sprintf(texto,"Finaliza la atencion al cliente, todo en regla");
                 tipoAtencion = 0;
                 dormir = calculaAleatorio(1, 4);
             } else if (probabilidad <= 90) {
+                printf("Finaliza la atencion al cliente, cliente mal identificado");
                 sprintf(texto,"Finaliza la atencion al cliente, cliente mal identificado");
                 tipoAtencion = 1;
                 dormir = calculaAleatorio(2, 6);
             } else {
+                printf("Finaliza la atencion al cliente, compañía equivocada");
                 sprintf(texto,"Finaliza la atencion al cliente, compañía equivocada");
                 tipoAtencion = 2;
                 dormir = calculaAleatorio(1, 2);
@@ -484,8 +496,9 @@ void *accionesTecnico(void *arg) {
             pthread_mutex_unlock(&semaforoColaClientes);
 
         } else {
+            printf("no hay clientes para atender\n");
             pthread_mutex_unlock(&semaforoColaClientes);
-            sleep(1);
+            sleep(3);//TODO es un sleep1, cambiar antes de entregar
         }
     }
     pthread_exit(NULL);
@@ -592,7 +605,7 @@ void escribirEnLog(char *id, char *mensaje){
 int buscarClientePrioritario(char tipo) {
     int prioridadMaxima = buscarPrioridad(tipo);
     for (int i = 0; i<contadorPeticiones; i++) {
-        if (listaClientes[i].prioridad == prioridadMaxima && listaClientes[i].tipo == tipo && listaClientes[i].atendido == 0) {
+        if (prioridadMaxima>0 &&listaClientes[i].prioridad == prioridadMaxima && listaClientes[i].tipo == tipo && listaClientes[i].atendido == 0) {
             listaClientes[i].atendido = 1;
             return i;
         } 
@@ -601,9 +614,11 @@ int buscarClientePrioritario(char tipo) {
 
 void accionFinalTecnico(char idCliente[20]) {
     for (int i = 0; i<contadorPeticiones; i++) {
-        if (listaClientes[i].id == idCliente) {
+        if (strcmp(listaClientes[i].id,idCliente)) {
             listaClientes[i].atendido = 2;
+            return;
         } else {
         }
     }
+    printf("Cliente no encontrado");
 }
